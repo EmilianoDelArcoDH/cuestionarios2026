@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Topic {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  questions    Question[]
+  quizAttempts QuizAttempt[]
+
+  @@map("topics")
+}
+
+enum QuestionType {
+  single
+  multiple
+
+  @@map("question_type")
+}
+
+model Question {
+  id        String       @id @default(uuid()) @db.Uuid
+  topicId   String       @map("topic_id") @db.Uuid
+  text      String
+  type      QuestionType
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  topic               Topic                @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  answers             Answer[]
+  quizAttemptAnswers  QuizAttemptAnswer[]
+
+  @@map("questions")
+}
+
+model Answer {
+  id         String   @id @default(uuid()) @db.Uuid
+  questionId String   @map("question_id") @db.Uuid
+  text       String
+  isCorrect  Boolean  @default(false) @map("is_correct")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("answers")
+}
+
+model QuizAttempt {
+  id            String   @id @default(uuid()) @db.Uuid
+  topicId       String   @map("topic_id") @db.Uuid
+  attemptNumber Int      @map("attempt_number")
+  scorePercent  Decimal  @map("score_percent") @db.Decimal(5, 2)
+  passed        Boolean
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  topic   Topic               @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  answers QuizAttemptAnswer[]
+
+  @@unique([topicId, attemptNumber])
+  @@map("quiz_attempts")
+}
+
+model QuizAttemptAnswer {
+  id                String   @id @default(uuid()) @db.Uuid
+  attemptId         String   @map("attempt_id") @db.Uuid
+  questionId        String   @map("question_id") @db.Uuid
+  selectedAnswerIds Json     @map("selected_answer_ids")
+  isCorrect         Boolean  @map("is_correct")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  attempt  QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id])
+
+  @@map("quiz_attempt_answers")
+}

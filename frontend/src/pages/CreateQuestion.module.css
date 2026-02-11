@@ -1,0 +1,119 @@
+.create-question {
+  background: linear-gradient(to bottom, #ffffff 0%, #fafafa 100%);
+  padding: 35px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.06);
+  max-width: 800px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #555;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.answers-section {
+  margin-top: 30px;
+  padding: 24px;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border-radius: 14px;
+  border: 2px solid #e8e8e8;
+}
+
+.answer-item {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  align-items: flex-start;
+}
+
+.answer-item input[type="text"] {
+  flex: 1;
+  font-size: 14px;
+  letter-spacing: -0.01em;
+}
+
+.answer-item input[type="checkbox"] {
+  width: auto;
+  margin-top: 12px;
+}
+
+.answer-item label {
+  margin-top: 12px;
+  white-space: nowrap;
+}
+
+.remove-button {
+  background-color: #f44336;
+  color: white;
+  padding: 10px 15px;
+  flex-shrink: 0;
+}
+
+.remove-button:hover {
+  background-color: #d32f2f;
+}
+
+.add-answer-button {
+  background: linear-gradient(135deg, #2196F3 0%, #42A5F5 100%);
+  color: white;
+  margin-top: 10px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3);
+  transition: all 0.3s ease;
+}
+
+.add-answer-button:hover {
+  background: linear-gradient(135deg, #1976D2 0%, #2196F3 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(33, 150, 243, 0.4);
+}
+
+.button-primary {
+  background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+  color: white;
+  width: 100%;
+  margin-top: 25px;
+  padding: 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.3);
+  transition: all 0.3s ease;
+}
+
+.button-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #45a049 0%, #5cb85f 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(76, 175, 80, 0.4);
+}
+
+.back-link {
+  display: inline-block;
+  margin-top: 20px;
+  color: #666;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: #4CAF50;
+}
+
+.validation-info {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  padding: 14px;
+  border-radius: 10px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #0d47a1;
+  border-left: 4px solid #2196F3;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+}

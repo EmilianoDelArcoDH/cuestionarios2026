@@ -1,0 +1,240 @@
+### Plataforma de Cuestionarios - API Testing
+### Usar con la extensión REST Client de VS Code
+
+@baseUrl = http://localhost:3000/api
+
+###############################################
+# HEALTH CHECK
+###############################################
+
+### Health Check
+GET http://localhost:3000/health
+
+###############################################
+# TOPICS
+###############################################
+
+### Crear Tema - JavaScript
+POST {{baseUrl}}/topics
+Content-Type: application/json
+
+{
+  "name": "JavaScript Avanzado"
+}
+
+###
+
+### Crear Tema - Python (idempotente - si existe lo devuelve)
+POST {{baseUrl}}/topics
+Content-Type: application/json
+
+{
+  "name": "Python Basics"
+}
+
+###
+
+### Listar todos los Temas
+GET {{baseUrl}}/topics
+
+###############################################
+# QUESTIONS
+###############################################
+
+### Crear Pregunta Single Choice
+# NOTA: Reemplazar {TOPIC_ID} con un ID real de topic
+POST {{baseUrl}}/topics/{TOPIC_ID}/questions
+Content-Type: application/json
+
+{
+  "text": "¿Qué es async/await en JavaScript?",
+  "type": "single",
+  "answers": [
+    {
+      "text": "Una forma de manejar código asíncrono de manera más legible",
+      "is_correct": true
+    },
+    {
+      "text": "Un tipo de variable",
+      "is_correct": false
+    },
+    {
+      "text": "Una función del DOM",
+      "is_correct": false
+    },
+    {
+      "text": "Un loop especial",
+      "is_correct": false
+    }
+  ]
+}
+
+###
+
+### Crear Pregunta Multiple Choice
+# NOTA: Reemplazar {TOPIC_ID} con un ID real de topic
+POST {{baseUrl}}/topics/{TOPIC_ID}/questions
+Content-Type: application/json
+
+{
+  "text": "¿Cuáles son métodos de array en JavaScript?",
+  "type": "multiple",
+  "answers": [
+    {
+      "text": "map",
+      "is_correct": true
+    },
+    {
+      "text": "filter",
+      "is_correct": true
+    },
+    {
+      "text": "forEach",
+      "is_correct": true
+    },
+    {
+      "text": "select",
+      "is_correct": false
+    }
+  ]
+}
+
+###
+
+### Actualizar Pregunta
+# NOTA: Reemplazar {QUESTION_ID} con un ID real
+PUT {{baseUrl}}/questions/{QUESTION_ID}
+Content-Type: application/json
+
+{
+  "text": "¿Qué es async/await en JavaScript? (EDITADA)"
+}
+
+###
+
+### Actualizar Respuesta
+# NOTA: Reemplazar {ANSWER_ID} con un ID real
+PUT {{baseUrl}}/answers/{ANSWER_ID}
+Content-Type: application/json
+
+{
+  "text": "Una forma moderna de manejar promesas",
+  "is_correct": true
+}
+
+###############################################
+# QUIZ
+###############################################
+
+### Obtener Quiz de un Tema (preguntas y respuestas aleatorias)
+# NOTA: Reemplazar {TOPIC_ID} con un ID real de topic
+GET {{baseUrl}}/topics/{TOPIC_ID}/quiz
+
+###
+
+### Enviar Respuestas de un Quiz
+# NOTA: Reemplazar {TOPIC_ID}, {QUESTION_ID_1}, {ANSWER_ID_1}, etc. con IDs reales
+# Primero obtén el quiz con GET /quiz para ver los IDs
+POST {{baseUrl}}/topics/{TOPIC_ID}/attempts
+Content-Type: application/json
+
+{
+  "answers": [
+    {
+      "question_id": "{QUESTION_ID_1}",
+      "selected_answer_ids": ["{ANSWER_ID_1}"]
+    },
+    {
+      "question_id": "{QUESTION_ID_2}",
+      "selected_answer_ids": ["{ANSWER_ID_2}", "{ANSWER_ID_3}"]
+    }
+  ]
+}
+
+###
+
+### Ver Intentos de un Tema
+# NOTA: Reemplazar {TOPIC_ID} con un ID real de topic
+GET {{baseUrl}}/topics/{TOPIC_ID}/attempts
+
+###############################################
+# TESTS DE VALIDACIÓN
+###############################################
+
+### Error: Pregunta sin respuestas correctas
+POST {{baseUrl}}/topics/{TOPIC_ID}/questions
+Content-Type: application/json
+
+{
+  "text": "Esta pregunta fallará",
+  "type": "single",
+  "answers": [
+    {
+      "text": "Respuesta 1",
+      "is_correct": false
+    },
+    {
+      "text": "Respuesta 2",
+      "is_correct": false
+    }
+  ]
+}
+
+###
+
+### Error: Pregunta single con múltiples correctas
+POST {{baseUrl}}/topics/{TOPIC_ID}/questions
+Content-Type: application/json
+
+{
+  "text": "Esta pregunta fallará",
+  "type": "single",
+  "answers": [
+    {
+      "text": "Respuesta 1",
+      "is_correct": true
+    },
+    {
+      "text": "Respuesta 2",
+      "is_correct": true
+    }
+  ]
+}
+
+###
+
+### Error: Menos de 2 respuestas
+POST {{baseUrl}}/topics/{TOPIC_ID}/questions
+Content-Type: application/json
+
+{
+  "text": "Esta pregunta fallará",
+  "type": "single",
+  "answers": [
+    {
+      "text": "Solo una respuesta",
+      "is_correct": true
+    }
+  ]
+}
+
+###
+
+### Error: Tema no encontrado
+GET {{baseUrl}}/topics/00000000-0000-0000-0000-000000000000/quiz
+
+###
+
+### Error: 4to intento (después de 3 intentos)
+# Primero haz 3 intentos válidos, luego este debería fallar
+POST {{baseUrl}}/topics/{TOPIC_ID}/attempts
+Content-Type: application/json
+
+{
+  "answers": [
+    {
+      "question_id": "{QUESTION_ID}",
+      "selected_answer_ids": ["{ANSWER_ID}"]
+    }
+  ]
+}
