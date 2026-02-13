@@ -22,11 +22,11 @@ export async function getTopics() {
 /**
  * Crear un tema
  */
-export async function createTopic(name) {
+export async function createTopic(name, tags = []) {
   const response = await fetch(`${API_BASE_URL}/topics`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name })
+    body: JSON.stringify({ name, tags })
   });
   return handleResponse(response);
 }
@@ -68,5 +68,65 @@ export async function submitAttempt(topicId, answers) {
  */
 export async function getAttempts(topicId) {
   const response = await fetch(`${API_BASE_URL}/topics/${topicId}/attempts`);
+  return handleResponse(response);
+}
+
+/**
+ * Obtener un tema específico
+ */
+export async function getTopic(topicId) {
+  const response = await fetch(`${API_BASE_URL}/topics/${topicId}`);
+  return handleResponse(response);
+}
+
+/**
+ * Actualizar un tema
+ */
+export async function updateTopic(topicId, updateData) {
+  const response = await fetch(`${API_BASE_URL}/topics/${topicId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updateData)
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Eliminar un tema
+ */
+export async function deleteTopic(topicId) {
+  const response = await fetch(`${API_BASE_URL}/topics/${topicId}`, {
+    method: 'DELETE'
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Obtener preguntas de un tema
+ */
+export async function getQuestions(topicId) {
+  const response = await fetch(`${API_BASE_URL}/topics/${topicId}/questions`);
+  return handleResponse(response);
+}
+
+/**
+ * Actualizar una pregunta
+ */
+export async function updateQuestion(topicId, questionId, questionData) {
+  const response = await fetch(`${API_BASE_URL}/topics/${topicId}/questions/${questionId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(questionData)
+  });
+  return handleResponse(response);
+}
+
+/**
+ * Eliminar una pregunta
+ */
+export async function deleteQuestion(topicId, questionId) {
+  const response = await fetch(`${API_BASE_URL}/topics/${topicId}/questions/${questionId}`, {
+    method: 'DELETE'
+  });
   return handleResponse(response);
 }

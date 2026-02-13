@@ -43,6 +43,8 @@ export async function createQuestion(topicId, questionData) {
  * Actualiza una pregunta
  */
 export async function updateQuestion(questionId, updateData) {
+  const { text, type, answers } = updateData;
+  
   const question = await prisma.question.findUnique({
     where: { id: questionId },
     include: { answers: true }
@@ -54,27 +56,95 @@ export async function updateQuestion(questionId, updateData) {
     throw error;
   }
 
-  // Si se cambia el tipo a 'single', validar que solo haya una respuesta correcta
-  if (updateData.type === 'single') {
-    const correctAnswers = question.answers.filter(a => a.isCorrect);
-    if (correctAnswers.length !== 1) {
-      const error = new Error('Las preguntas de tipo "single" deben tener exactamente 1 respuesta correcta');
-      error.status = 400;
-      throw error;
-    }
+  // Si se proporcionan respuestas, actualizar en transacción
+  if (answers) {
+    return await prisma.$transaction(async (tx) => {
+      // Eliminar respuestas antiguas
+      await tx.answer.deleteMany({
+        where: { questionId }
+      });
+
+      // Actualizar pregunta y crear nuevas respuestas
+      return await tx.question.update({
+        where: { id: questionId },
+        data: {
+          text: text || question.text,
+          type: type || question.type,
+          answers: {
+            create: answers.map(answer => ({
+              text: answer.text,
+              isCorrect: answer.is_correct
+            }))
+          }
+        },
+        include: { answers: true }
+      });
+    });
   }
 
+  // Si solo se actualiza el texto o tipo
   return await prisma.question.update({
     where: { id: questionId },
-    data: updateData,
+    data: { text, type },
     include: { answers: true }
   });
+}
+
+/**
+ * Obtiene todas las preguntas de un tema
+ */
+export async function getQuestions(topicId) {
+  const questions = await prisma.question.findMany({
+    where: { topicId },
+    include: {
+      answers: true
+    },
+    orderBy: {
+      createdAt: 'asc'
+    }
+  });
+
+  return questions;
+}
+
+/**
+ * Elimina una pregunta
+ */
+export async function deleteQuestion(questionId) {
+  const question = await prisma.question.findUnique({
+    where: { id: questionId }
+  });
+
+  if (!question) {
+    const error = new Error('Pregunta no encontrada');
+    error.status = 404;
+    throw error;
+  }
+
+  await prisma.question.delete({
+    where: { id: questionId }
+  });
+
+  return { message: 'Pregunta eliminada exitosamente' };
 }
 
 /**
  * Obtiene un cuestionario con preguntas y respuestas en orden aleatorio
  */
 export async function getQuiz(topicId) {
+  console.log('🔍 Buscando quiz para topicId:', topicId);
+  console.log('   Tipo:', typeof topicId);
+  console.log('   Longitud:', topicId?.length);
+  
+  // Validar formato UUID
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(topicId)) {
+    console.log('❌ El topicId no es un UUID válido');
+    const error = new Error('ID de tema inválido');
+    error.status = 400;
+    throw error;
+  }
+  
   const topic = await prisma.topic.findUnique({
     where: { id: topicId },
     include: {
@@ -85,6 +155,8 @@ export async function getQuiz(topicId) {
       }
     }
   });
+
+  console.log('📊 Tema encontrado:', topic ? `${topic.name} (${topic.questions.length} preguntas)` : 'null');
 
   if (!topic) {
     const error = new Error('Tema no encontrado');

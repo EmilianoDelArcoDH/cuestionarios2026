@@ -4,6 +4,11 @@ import styles from './Navbar.module.css';
 export default function Navbar() {
   const location = useLocation();
 
+  // Ocultar navbar durante el quiz
+  if (location.pathname.startsWith('/quiz/')) {
+    return null;
+  }
+
   return (
     <div className={styles.navbar}>
       <h1>📝 Plataforma de Cuestionarios</h1>

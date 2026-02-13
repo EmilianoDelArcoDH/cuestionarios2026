@@ -7,8 +7,14 @@ const router = express.Router();
 // Crear pregunta para un tema
 router.post('/topics/:topicId/questions', asyncHandler(questionController.createQuestion));
 
+// Obtener preguntas de un tema
+router.get('/topics/:topicId/questions', asyncHandler(questionController.getQuestions));
+
 // Actualizar pregunta
-router.put('/questions/:questionId', asyncHandler(questionController.updateQuestion));
+router.put('/topics/:topicId/questions/:questionId', asyncHandler(questionController.updateQuestion));
+
+// Eliminar pregunta
+router.delete('/topics/:topicId/questions/:questionId', asyncHandler(questionController.deleteQuestion));
 
 // Actualizar respuesta
 router.put('/answers/:answerId', asyncHandler(questionController.updateAnswer));

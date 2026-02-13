@@ -4,7 +4,7 @@ import { slugify } from '../utils/helpers.js';
 /**
  * Crea un tema o devuelve el existente si ya existe
  */
-export async function createOrGetTopic(name) {
+export async function createOrGetTopic(name, tags = []) {
   const slug = slugify(name);
 
   // Buscar si ya existe
@@ -22,7 +22,8 @@ export async function createOrGetTopic(name) {
     topic = await prisma.topic.create({
       data: {
         name,
-        slug
+        slug,
+        tags: Array.isArray(tags) ? tags : []
       }
     });
   }
@@ -52,7 +53,63 @@ export async function getAllTopics() {
  * Obtiene un tema por ID
  */
 export async function getTopicById(topicId) {
-  return await prisma.topic.findUnique({
+  const topic = await prisma.topic.findUnique({
     where: { id: topicId }
   });
+
+  if (!topic) {
+    const error = new Error('Tema no encontrado');
+    error.status = 404;
+    throw error;
+  }
+
+  return topic;
+}
+
+/**
+ * Actualiza un tema
+ */
+export async function updateTopic(topicId, updateData) {
+  const topic = await prisma.topic.findUnique({
+    where: { id: topicId }
+  });
+
+  if (!topic) {
+    const error = new Error('Tema no encontrado');
+    error.status = 404;
+    throw error;
+  }
+
+  const { name, tags } = updateData;
+  const slug = name ? slugify(name) : undefined;
+
+  return await prisma.topic.update({
+    where: { id: topicId },
+    data: {
+      ...(name && { name }),
+      ...(slug && { slug }),
+      ...(tags !== undefined && { tags: Array.isArray(tags) ? tags : [] })
+    }
+  });
+}
+
+/**
+ * Elimina un tema
+ */
+export async function deleteTopic(topicId) {
+  const topic = await prisma.topic.findUnique({
+    where: { id: topicId }
+  });
+
+  if (!topic) {
+    const error = new Error('Tema no encontrado');
+    error.status = 404;
+    throw error;
+  }
+
+  await prisma.topic.delete({
+    where: { id: topicId }
+  });
+
+  return { message: 'Tema eliminado exitosamente' };
 }

@@ -12,10 +12,28 @@ export default function Quiz() {
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   useEffect(() => {
     loadQuiz();
   }, [topicId]);
+
+  // Agregar event listener para clicks en imágenes
+  useEffect(() => {
+    const handleImageClick = (e) => {
+      if (e.target.tagName === 'IMG' && e.target.closest(`.${styles.questionText}, .${styles.answerOption}`)) {
+        e.preventDefault();
+        setLightboxImage(e.target.src);
+      }
+    };
+
+    document.addEventListener('click', handleImageClick);
+    return () => document.removeEventListener('click', handleImageClick);
+  }, []);
+
+  function closeLightbox() {
+    setLightboxImage(null);
+  }
 
   async function loadQuiz() {
     try {
@@ -122,7 +140,6 @@ export default function Quiz() {
     return (
       <div className={styles.quiz}>
         <div className="error-message">{error}</div>
-        <Link to="/" className={styles.backLink}>← Volver al inicio</Link>
       </div>
     );
   }
@@ -174,9 +191,6 @@ export default function Quiz() {
                 🔄 Intentar de Nuevo
               </button>
             )}
-            <Link to="/" className={styles.homeLink}>
-              🏠 Volver al Inicio
-            </Link>
           </div>
         </div>
       </div>
@@ -225,9 +239,10 @@ export default function Quiz() {
             </span>
           </div>
 
-          <div className={styles.questionText}>
-            {currentQuestion.text}
-          </div>
+          <div 
+            className={styles.questionText}
+            dangerouslySetInnerHTML={{ __html: currentQuestion.text }}
+          />
 
           <ul className={styles.answersList}>
             {currentQuestion.answers.map((answer) => (
@@ -240,9 +255,10 @@ export default function Quiz() {
                   onChange={() => handleAnswerChange(currentQuestion.id, answer.id, currentQuestion.type)}
                   disabled={submitting}
                 />
-                <label htmlFor={`answer-${answer.id}`}>
-                  {answer.text}
-                </label>
+                <label 
+                  htmlFor={`answer-${answer.id}`}
+                  dangerouslySetInnerHTML={{ __html: answer.text }}
+                />
               </li>
             ))}
           </ul>
@@ -279,7 +295,17 @@ export default function Quiz() {
         </div>
       </form>
 
-      <Link to="/" className={styles.backLink}>← Volver al inicio</Link>
+      {/* Lightbox para ampliar imágenes */}
+      {lightboxImage && (
+        <div className={styles.lightbox} onClick={closeLightbox}>
+          <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+            <button className={styles.lightboxClose} onClick={closeLightbox}>
+              ✕
+            </button>
+            <img src={lightboxImage} alt="Imagen ampliada" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

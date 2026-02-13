@@ -14,6 +14,7 @@ model Topic {
   id        String   @id @default(uuid()) @db.Uuid
   name      String   @unique
   slug      String   @unique
+  tags      String[] @default([])
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

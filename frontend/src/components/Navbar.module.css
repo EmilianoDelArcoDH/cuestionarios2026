@@ -1,27 +1,28 @@
 .navbar {
   background: linear-gradient(to right, #ffffff 0%, #fafafa 100%);
-  padding: 24px;
-  margin-bottom: 35px;
-  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  border-radius: 14px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
   border-bottom: 3px solid transparent;
   border-image: linear-gradient(90deg, #4CAF50, #66BB6A) 1;
+  flex-shrink: 0;
 }
 
 .navbar h1 {
-  margin: 0 0 18px 0;
+  margin: 0 0 14px 0;
   background: linear-gradient(135deg, #2E7D32 0%, #4CAF50 50%, #66BB6A 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   font-weight: 700;
   letter-spacing: -0.03em;
-  font-size: 28px;
+  font-size: 26px;
 }
 
 .navbar nav {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 

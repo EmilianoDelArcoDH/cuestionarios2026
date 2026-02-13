@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { getTopics, createQuestion } from '../services/api';
 import styles from './CreateQuestion.module.css';
 
 export default function CreateQuestion() {
+  const [searchParams] = useSearchParams();
+  const topicIdFromUrl = searchParams.get('topicId');
+  
   const [topics, setTopics] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [text, setText] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [type, setType] = useState('single');
   const [answers, setAnswers] = useState([
-    { text: '', is_correct: false },
-    { text: '', is_correct: false }
+    { text: '', imageUrl: '', is_correct: false },
+    { text: '', imageUrl: '', is_correct: false }
   ]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +28,9 @@ export default function CreateQuestion() {
     try {
       const data = await getTopics();
       setTopics(data);
-      if (data.length > 0) {
+      if (topicIdFromUrl) {
+        setSelectedTopicId(topicIdFromUrl);
+      } else if (data.length > 0) {
         setSelectedTopicId(data[0].id);
       }
     } catch (err) {
@@ -33,7 +39,7 @@ export default function CreateQuestion() {
   }
 
   function addAnswer() {
-    setAnswers([...answers, { text: '', is_correct: false }]);
+    setAnswers([...answers, { text: '', imageUrl: '', is_correct: false }]);
   }
 
   function removeAnswer(index) {
@@ -56,6 +62,11 @@ export default function CreateQuestion() {
     }
     
     setAnswers(newAnswers);
+  }
+
+  function buildHtmlWithImage(text, imageUrl) {
+    if (!imageUrl) return text;
+    return `${text}\n<img src="${imageUrl}" alt="imagen">`;
   }
 
   async function handleSubmit(e) {
@@ -96,18 +107,22 @@ export default function CreateQuestion() {
       setSuccess('');
 
       await createQuestion(selectedTopicId, {
-        text,
+        text: buildHtmlWithImage(text, imageUrl),
         type,
-        answers: filledAnswers
+        answers: filledAnswers.map(a => ({
+          text: buildHtmlWithImage(a.text, a.imageUrl),
+          is_correct: a.is_correct
+        }))
       });
 
       setSuccess('Pregunta creada exitosamente');
       
       // Reset form
       setText('');
+      setImageUrl('');
       setAnswers([
-        { text: '', is_correct: false },
-        { text: '', is_correct: false }
+        { text: '', imageUrl: '', is_correct: false },
+        { text: '', imageUrl: '', is_correct: false }
       ]);
     } catch (err) {
       setError(err.message);
@@ -167,6 +182,23 @@ export default function CreateQuestion() {
         </div>
 
         <div className={styles.formGroup}>
+          <label htmlFor="imageUrl">URL de Imagen (opcional)</label>
+          <input
+            type="text"
+            id="imageUrl"
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="https://ejemplo.com/imagen.jpg"
+            disabled={loading}
+          />
+          {imageUrl && (
+            <div className={styles.imagePreview}>
+              <img src={imageUrl} alt="Vista previa de la pregunta" />
+            </div>
+          )}
+        </div>
+
+        <div className={styles.formGroup}>
           <label htmlFor="type">Tipo de Pregunta</label>
           <select
             id="type"
@@ -199,34 +231,55 @@ export default function CreateQuestion() {
           <h3>Respuestas</h3>
           
           {answers.map((answer, index) => (
-            <div key={index} className={styles.answerItem}>
-              <input
-                type="text"
-                value={answer.text}
-                onChange={(e) => updateAnswer(index, 'text', e.target.value)}
-                placeholder={`Respuesta ${index + 1}`}
-                disabled={loading}
-              />
-              
-              <input
-                type="checkbox"
-                id={`correct-${index}`}
-                checked={answer.is_correct}
-                onChange={(e) => updateAnswer(index, 'is_correct', e.target.checked)}
-                disabled={loading}
-              />
-              <label htmlFor={`correct-${index}`}>Correcta</label>
-
-              {answers.length > 2 && (
-                <button
-                  type="button"
-                  onClick={() => removeAnswer(index)}
-                  className={styles.removeButton}
+            <div key={index} className={styles.answerItemFull}>
+              <div className={styles.answerRow}>
+                <input
+                  type="text"
+                  value={answer.text}
+                  onChange={(e) => updateAnswer(index, 'text', e.target.value)}
+                  placeholder={`Respuesta ${index + 1}`}
                   disabled={loading}
-                >
-                  ✕
-                </button>
-              )}
+                  className={styles.answerTextInput}
+                />
+                
+                <div className={styles.answerControls}>
+                  <input
+                    type="checkbox"
+                    id={`correct-${index}`}
+                    checked={answer.is_correct}
+                    onChange={(e) => updateAnswer(index, 'is_correct', e.target.checked)}
+                    disabled={loading}
+                  />
+                  <label htmlFor={`correct-${index}`}>Correcta</label>
+
+                  {answers.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => removeAnswer(index)}
+                      className={styles.removeButton}
+                      disabled={loading}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              <div className={styles.answerImageRow}>
+                <input
+                  type="text"
+                  value={answer.imageUrl || ''}
+                  onChange={(e) => updateAnswer(index, 'imageUrl', e.target.value)}
+                  placeholder="URL de imagen (opcional)"
+                  disabled={loading}
+                  className={styles.answerImageInput}
+                />
+                {answer.imageUrl && (
+                  <div className={styles.answerImagePreview}>
+                    <img src={answer.imageUrl} alt={`Vista previa ${index + 1}`} />
+                  </div>
+                )}
+              </div>
             </div>
           ))}
 

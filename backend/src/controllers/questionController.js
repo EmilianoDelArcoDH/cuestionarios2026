@@ -20,16 +20,40 @@ export async function createQuestion(req, res) {
 }
 
 /**
- * PUT /api/questions/:questionId
+ * GET /api/topics/:topicId/questions
+ * Obtiene todas las preguntas de un tema
+ */
+export async function getQuestions(req, res) {
+  const { topicId } = req.params;
+  
+  const questions = await questionService.getQuestions(topicId);
+  
+  res.json(questions);
+}
+
+/**
+ * PUT /api/topics/:topicId/questions/:questionId
  * Actualiza una pregunta
  */
 export async function updateQuestion(req, res) {
   const { questionId } = req.params;
-  const updateData = updateQuestionSchema.parse(req.body);
+  const updateData = req.body;
   
   const question = await questionService.updateQuestion(questionId, updateData);
   
   res.json(question);
+}
+
+/**
+ * DELETE /api/topics/:topicId/questions/:questionId
+ * Elimina una pregunta
+ */
+export async function deleteQuestion(req, res) {
+  const { questionId } = req.params;
+  
+  const result = await questionService.deleteQuestion(questionId);
+  
+  res.json(result);
 }
 
 /**
@@ -51,6 +75,7 @@ export async function updateAnswer(req, res) {
  */
 export async function getQuiz(req, res) {
   const { topicId } = req.params;
+  console.log('📥 GET /api/topics/:topicId/quiz - topicId recibido:', topicId);
   
   const quiz = await questionService.getQuiz(topicId);
   

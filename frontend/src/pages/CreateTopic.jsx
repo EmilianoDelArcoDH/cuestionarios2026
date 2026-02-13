@@ -23,7 +23,7 @@ export default function CreateTopic() {
       setError('');
       setSuccess('');
       
-      const topic = await createTopic(name);
+      const topic = await createTopic(name, []);
       
       setSuccess(`Tema "${topic.name}" creado/encontrado exitosamente`);
       setName('');
