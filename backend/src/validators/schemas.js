@@ -31,6 +31,13 @@ export const createQuestionSchema = z.object({
       { message: 'Debe haber al menos una respuesta correcta' }
     )
     .refine(
+      (answers) => {
+        const normalizedTexts = answers.map(a => a.text.trim().toLowerCase());
+        return new Set(normalizedTexts).size === normalizedTexts.length;
+      },
+      { message: 'No se permiten respuestas duplicadas (ignorando mayúsculas y espacios)' }
+    )
+    .refine(
       (answers, ctx) => {
         const parentType = ctx.parent?.type;
         if (parentType === 'single') {

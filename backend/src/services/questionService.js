@@ -1,11 +1,48 @@
 import prisma from '../db/prisma.js';
 import { shuffle } from '../utils/helpers.js';
 
+function normalizeAnswerText(text) {
+  return text.trim().toLowerCase();
+}
+
+function ensureUniqueAnswers(answers) {
+  const seen = new Set();
+
+  for (const answer of answers) {
+    const normalizedText = normalizeAnswerText(answer.text);
+
+    if (seen.has(normalizedText)) {
+      const error = new Error('No se permiten respuestas duplicadas en una misma pregunta');
+      error.status = 400;
+      throw error;
+    }
+
+    seen.add(normalizedText);
+  }
+}
+
+function dedupeAnswersForQuiz(answers) {
+  const seen = new Set();
+
+  return answers.filter((answer) => {
+    const normalizedText = normalizeAnswerText(answer.text);
+
+    if (seen.has(normalizedText)) {
+      return false;
+    }
+
+    seen.add(normalizedText);
+    return true;
+  });
+}
+
 /**
  * Crea una pregunta con sus respuestas
  */
 export async function createQuestion(topicId, questionData) {
   const { text, type, answers } = questionData;
+
+  ensureUniqueAnswers(answers);
 
   // Verificar que el tema existe
   const topic = await prisma.topic.findUnique({
@@ -58,6 +95,8 @@ export async function updateQuestion(questionId, updateData) {
 
   // Si se proporcionan respuestas, actualizar en transacción
   if (answers) {
+    ensureUniqueAnswers(answers);
+
     return await prisma.$transaction(async (tx) => {
       // Eliminar respuestas antiguas
       await tx.answer.deleteMany({
@@ -178,7 +217,7 @@ export async function getQuiz(topicId) {
     id: question.id,
     text: question.text,
     type: question.type,
-    answers: shuffle(question.answers).map(answer => ({
+    answers: shuffle(dedupeAnswersForQuiz(question.answers)).map(answer => ({
       id: answer.id,
       text: answer.text
       // NO enviar is_correct al frontend

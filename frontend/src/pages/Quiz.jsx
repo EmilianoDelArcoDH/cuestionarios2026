@@ -1,7 +1,23 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { getQuiz, submitAttempt } from '../services/api';
 import styles from './Quiz.module.css';
+
+function formatQuizTitle(name) {
+  if (!name) return '';
+
+  const hasBracketPrefix = /^\s*\[[^\]]+\]/.test(name);
+  if (!hasBracketPrefix) return name.trim();
+
+  const withoutBracket = name.replace(/^\s*\[[^\]]+\]\s*/, '');
+  const dashIndex = withoutBracket.indexOf(' - ');
+
+  if (dashIndex === -1) {
+    return withoutBracket.trim();
+  }
+
+  return withoutBracket.slice(dashIndex + 3).trim();
+}
 
 export default function Quiz() {
   const { topicId } = useParams();
@@ -13,6 +29,8 @@ export default function Quiz() {
   const [result, setResult] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [lightboxImage, setLightboxImage] = useState(null);
+
+  const displayTitle = formatQuizTitle(quiz?.topic?.name);
 
   useEffect(() => {
     loadQuiz();
@@ -149,7 +167,7 @@ export default function Quiz() {
     return (
       <div className={styles.quiz}>
         <div className={styles.results}>
-          <h3>{quiz.topic.name}</h3>
+          <h3>{displayTitle}</h3>
           
           <div className={`${styles.scoreDisplay} ${result.passed ? styles.passed : styles.failed}`}>
             {result.score_percent}%
@@ -207,7 +225,7 @@ export default function Quiz() {
   return (
     <div className={styles.quiz}>
       <div className={styles.quizHeader}>
-        <h2>{quiz.topic.name}</h2>
+        <h2>{displayTitle}</h2>
         <p className={styles.questionCounter}>
           Pregunta {currentNumber} de {totalQuestions}
         </p>

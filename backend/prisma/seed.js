@@ -128,12 +128,20 @@ async function main() {
     
     // Solo agregar choices si es tipo choice y tiene un choice_option_id
     if (row.question_type === 'choice' && row.choice_option_id) {
-      question.choices.push({
+      const normalizedChoiceText = (row.choice_option_statement || '').trim().toLowerCase();
+      const alreadyExists = question.choices.some(choice =>
+        choice.id === row.choice_option_id ||
+        choice.statement.trim().toLowerCase() === normalizedChoiceText
+      );
+
+      if (!alreadyExists) {
+        question.choices.push({
         id: row.choice_option_id,
         statement: row.choice_option_statement,
         order: parseInt(row.choice_option_order || 0),
         is_correct: row.is_correct === '1'
-      });
+        });
+      }
     }
   }
 
