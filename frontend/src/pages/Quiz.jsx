@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { usePgEvent } from '../hook/usePgEvent';
 import { useParams } from 'react-router-dom';
 import { getQuiz, submitAttempt } from '../services/api';
 import styles from './Quiz.module.css';
@@ -20,6 +21,9 @@ function formatQuizTitle(name) {
 }
 
 export default function Quiz() {
+  const { postEvent, waitForMessage } = usePgEvent();
+  const [restored, setRestored] = useState(false);
+  const restoredState = useRef(null);
   const { topicId } = useParams();
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState({});
@@ -32,9 +36,32 @@ export default function Quiz() {
 
   const displayTitle = formatQuizTitle(quiz?.topic?.name);
 
+
+  // Restaurar estado desde PGEvent si existe
   useEffect(() => {
-    loadQuiz();
+    let isMounted = true;
+    (async () => {
+      // Espera mensaje inicial (si lo hay)
+      const pgState = await waitForMessage(1000);
+      if (pgState && isMounted) {
+        try {
+          const parsed = JSON.parse(pgState);
+          if (parsed?.data) {
+            restoredState.current = parsed.data;
+          }
+        } catch {}
+      }
+      setRestored(true);
+    })();
+    return () => { isMounted = false; };
   }, [topicId]);
+
+  useEffect(() => {
+    if (restored) {
+      loadQuiz();
+    }
+    // eslint-disable-next-line
+  }, [restored, topicId]);
 
   // Agregar event listener para clicks en imágenes
   useEffect(() => {
@@ -59,13 +86,38 @@ export default function Quiz() {
       setError('');
       const data = await getQuiz(topicId);
       setQuiz(data);
-      
-      // Inicializar estado de respuestas
-      const initialAnswers = {};
-      data.questions.forEach(q => {
-        initialAnswers[q.id] = [];
-      });
-      setAnswers(initialAnswers);
+
+      // Restaurar respuestas y resultado si hay state previo
+      if (restoredState.current && restoredState.current.topicId === topicId) {
+        // Restaurar respuestas
+        if (restoredState.current.answers) {
+          setAnswers(restoredState.current.answers);
+        } else {
+          // Inicializar si no hay respuestas
+          const initialAnswers = {};
+          data.questions.forEach(q => {
+            initialAnswers[q.id] = [];
+          });
+          setAnswers(initialAnswers);
+        }
+        // Restaurar resultado si ya completó
+        if (typeof restoredState.current.passed === 'boolean') {
+          setResult({
+            score_percent: restoredState.current.score_percent,
+            attempt_number: restoredState.current.attempt_number,
+            remaining_attempts: restoredState.current.remaining_attempts,
+            passed: restoredState.current.passed,
+            // ...puedes agregar más campos si necesitas
+          });
+        }
+      } else {
+        // Inicializar estado de respuestas
+        const initialAnswers = {};
+        data.questions.forEach(q => {
+          initialAnswers[q.id] = [];
+        });
+        setAnswers(initialAnswers);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -122,6 +174,44 @@ export default function Quiz() {
       const data = await submitAttempt(topicId, formattedAnswers);
       setResult(data.attempt);
       setCurrentQuestionIndex(0);
+
+      // Evento PG
+      const stateToPost = {
+        score_percent: data.attempt.score_percent,
+        attempt_number: data.attempt.attempt_number,
+        remaining_attempts: data.attempt.remaining_attempts,
+        passed: data.attempt.passed,
+        topicId,
+        answers, // todas las respuestas del usuario
+        quizId: quiz?.id,
+        questions: quiz?.questions?.map(q => ({ id: q.id, type: q.type })),
+      };
+      if (data.attempt.passed) {
+        postEvent(
+          "SUCCESS",
+          "Has completado el ejercicio",
+          [],
+          stateToPost
+        );
+      } else {
+        let reasons = [];
+        let message = "";
+        if (data.attempt.remaining_attempts === 0) {
+          reasons = ["Lo sentimos no hay más intentos"];
+          message = "El ejercicio está incompleto y no quedan más intentos";
+        } else {
+          reasons = [
+            `Revisa tus respuestas - te quedan ${data.attempt.remaining_attempts} intento${data.attempt.remaining_attempts > 1 ? 's' : ''}`
+          ];
+          message = "El ejercicio está incompleto";
+        }
+        postEvent(
+          "FAILURE",
+          message,
+          reasons,
+          stateToPost
+        );
+      }
     } catch (err) {
       setError(err.message);
     } finally {
