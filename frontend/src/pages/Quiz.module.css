@@ -13,6 +13,8 @@
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  height: 100vh;
+  min-height: 100vh;
 }
 
 .quiz * {
@@ -138,7 +140,7 @@
 /* Estilos para imágenes en las preguntas */
 .questionText img {
   max-width: 100%;
-  max-height: 30vh;
+  max-height: 19vh;
   width: auto;
   height: auto;
   border-radius: 8px;
@@ -321,6 +323,11 @@ html, body, #root {
   gap: 14px;
   margin-top: 14px;
   flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(to top, #3f3f3f 80%, transparent 100%);
+  z-index: 10;
+  padding-bottom: 12px;
 }
 
 .navButton {
