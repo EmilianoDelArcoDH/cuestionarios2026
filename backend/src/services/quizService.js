@@ -1,18 +1,6 @@
 /**
  * Devuelve el quiz de un tema (preguntas y respuestas)
  */
-export async function getQuizByTopicId(topicId) {
-    return await prisma.topic.findUnique({
-        where: { id: topicId },
-        include: {
-            questions: {
-                include: {
-                    answers: true
-                }
-            }
-        }
-    });
-}
 import prisma from '../db/prisma.js';
 import { arraysEqual } from '../utils/helpers.js';
 
