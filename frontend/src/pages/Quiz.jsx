@@ -267,13 +267,16 @@ export default function Quiz() {
             {result.passed ? '✓ APROBADO' : '✗ NO APROBADO'}
           </div>
 
-          <div className={styles.attemptsInfo}>
-            Intento {result.attempt_number} de 3<br />
-            {result.remaining_attempts > 0 
-              ? `Te quedan ${result.remaining_attempts} intento${result.remaining_attempts > 1 ? 's' : ''}`
-              : 'No te quedan más intentos'
-            }
-          </div>
+          {/* Solo mostrar info de intentos si NO está aprobado */}
+          {!result.passed && (
+            <div className={styles.attemptsInfo}>
+              Intento {result.attempt_number} de 3<br />
+              {result.remaining_attempts > 0 
+                ? `Te quedan ${result.remaining_attempts} intento${result.remaining_attempts > 1 ? 's' : ''}`
+                : 'No te quedan más intentos'
+              }
+            </div>
+          )}
 
           {result.passed && (
             <div className="success-message">
@@ -294,7 +297,8 @@ export default function Quiz() {
           )}
 
           <div className={styles.resultsActions}>
-            {result.remaining_attempts > 0 && (
+            {/* Solo mostrar botón de reintentar si NO está aprobado */}
+            {!result.passed && result.remaining_attempts > 0 && (
               <button onClick={handleRetry} className={styles.retryButton}>
                 🔄 Intentar de Nuevo
               </button>
