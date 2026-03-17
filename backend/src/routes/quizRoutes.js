@@ -1,3 +1,5 @@
+// Obtener quiz de un tema
+router.get('/topics/:topicId/quiz', asyncHandler(quizController.getQuiz));
 import express from 'express';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import * as quizController from '../controllers/quizController.js';
