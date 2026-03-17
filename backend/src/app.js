@@ -12,6 +12,7 @@ app.use(cors({
     "http://localhost:5174",
     "https://cuestionarios2026.vercel.app"
   ],
+  credentials: true,
   methods: ["GET","POST","PUT","DELETE","OPTIONS"],
   allowedHeaders: ["Content-Type","Authorization"]
 }));
