@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { usePgEvent } from '../hook/usePgEvent';
 import { useParams } from 'react-router-dom';
-import { getQuiz, submitAttempt } from '../services/api';
+import { getQuiz } from '../services/api';
 import styles from './Quiz.module.css';
 
 function formatQuizTitle(name) {
@@ -151,12 +151,12 @@ export default function Quiz() {
     });
   }
 
+  // Nueva lógica: intentos solo con PGEvent
   async function handleSubmit(e) {
     e.preventDefault();
 
     // Validar que todas las preguntas tengan respuesta
     const unanswered = quiz.questions.filter(q => !answers[q.id] || answers[q.id].length === 0);
-    
     if (unanswered.length > 0) {
       setError(`Debes responder todas las preguntas (${unanswered.length} sin responder)`);
       return;
@@ -166,27 +166,46 @@ export default function Quiz() {
       setSubmitting(true);
       setError('');
 
-      const formattedAnswers = quiz.questions.map(q => ({
-        question_id: q.id,
-        selected_answer_ids: answers[q.id]
-      }));
+      // Calcular intento actual
+      let attempt_number = 1;
+      if (restoredState.current && restoredState.current.attempt_number) {
+        attempt_number = restoredState.current.attempt_number + 1;
+      }
 
-      const data = await submitAttempt(topicId, formattedAnswers);
-      setResult(data.attempt);
+      // Evaluar respuestas
+      let correctCount = 0;
+      quiz.questions.forEach(q => {
+        const correctIds = q.answers.filter(a => a.isCorrect).map(a => a.id);
+        const userIds = answers[q.id] || [];
+        if (q.type === 'single') {
+          if (userIds.length === 1 && userIds[0] === correctIds[0]) correctCount++;
+        } else {
+          if (userIds.length === correctIds.length && userIds.every(id => correctIds.includes(id))) correctCount++;
+        }
+      });
+      const score_percent = Number(((correctCount / quiz.questions.length) * 100).toFixed(2));
+      const passed = score_percent >= 70;
+      const maxAttempts = 3;
+      const remaining_attempts = passed ? 0 : Math.max(0, maxAttempts - attempt_number);
+
+      const resultData = {
+        score_percent,
+        attempt_number,
+        remaining_attempts,
+        passed,
+      };
+      setResult(resultData);
       setCurrentQuestionIndex(0);
 
       // Evento PG
       const stateToPost = {
-        score_percent: data.attempt.score_percent,
-        attempt_number: data.attempt.attempt_number,
-        remaining_attempts: data.attempt.remaining_attempts,
-        passed: data.attempt.passed,
+        ...resultData,
         topicId,
-        answers, // todas las respuestas del usuario
+        answers,
         quizId: quiz?.id,
         questions: quiz?.questions?.map(q => ({ id: q.id, type: q.type })),
       };
-      if (data.attempt.passed) {
+      if (passed) {
         postEvent(
           "SUCCESS",
           "Has completado el ejercicio",
@@ -196,12 +215,12 @@ export default function Quiz() {
       } else {
         let reasons = [];
         let message = "";
-        if (data.attempt.remaining_attempts === 0) {
+        if (remaining_attempts === 0) {
           reasons = ["Lo sentimos no hay más intentos"];
           message = "El ejercicio está incompleto y no quedan más intentos";
         } else {
           reasons = [
-            `Revisa tus respuestas - te quedan ${data.attempt.remaining_attempts} intento${data.attempt.remaining_attempts > 1 ? 's' : ''}`
+            `Revisa tus respuestas - te quedan ${remaining_attempts} intento${remaining_attempts > 1 ? 's' : ''}`
           ];
           message = "El ejercicio está incompleto";
         }
@@ -213,7 +232,7 @@ export default function Quiz() {
         );
       }
     } catch (err) {
-      setError(err.message);
+      setError('Error al procesar el intento');
     } finally {
       setSubmitting(false);
     }
