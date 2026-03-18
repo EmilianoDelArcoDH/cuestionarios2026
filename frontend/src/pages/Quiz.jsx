@@ -43,6 +43,7 @@ export default function Quiz() {
     (async () => {
       // Espera mensaje inicial (si lo hay)
       const pgState = await waitForMessage(1000);
+      console.log('[PGEvent] Estado recibido al iniciar actividad:', pgState);
       if (pgState && isMounted) {
         try {
           const parsed = JSON.parse(pgState);
