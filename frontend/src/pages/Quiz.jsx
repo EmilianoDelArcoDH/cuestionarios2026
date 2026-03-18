@@ -178,10 +178,23 @@ export default function Quiz() {
       quiz.questions.forEach(q => {
         const correctIds = q.answers.filter(a => a.isCorrect).map(a => a.id);
         const userIds = answers[q.id] || [];
+        // Para preguntas simples (single): debe haber solo una respuesta y debe ser correcta
         if (q.type === 'single') {
-          if (userIds.length === 1 && userIds[0] === correctIds[0]) correctCount++;
-        } else {
-          if (userIds.length === correctIds.length && userIds.every(id => correctIds.includes(id))) correctCount++;
+          if (
+            userIds.length === 1 &&
+            correctIds.includes(userIds[0])
+          ) {
+            correctCount++;
+          }
+        } else if (q.type === 'multiple') {
+          // Para preguntas múltiples: todas las respuestas correctas deben estar seleccionadas y no debe haber extras
+          const isAllCorrect =
+            userIds.length === correctIds.length &&
+            userIds.every(id => correctIds.includes(id)) &&
+            correctIds.every(id => userIds.includes(id));
+          if (isAllCorrect) {
+            correctCount++;
+          }
         }
       });
       const score_percent = Number(((correctCount / quiz.questions.length) * 100).toFixed(2));
