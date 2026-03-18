@@ -52,7 +52,7 @@ export default function Quiz() {
 
     (async () => {
       const pgState = await waitForMessage(1000);
-      console.log('[PGEvent] Estado recibido al iniciar actividad:', pgState);
+      // console.log('[PGEvent] Estado recibido al iniciar actividad:', pgState);
 
       if (pgState && isMounted) {
         try {
@@ -170,12 +170,12 @@ export default function Quiz() {
 
     const userIds = (answers[q.id] || []).map((id) => String(id));
 
-    console.log('---');
-    console.log('Pregunta:', q.id);
-    console.log('Tipo:', q.type);
-    console.log('Answers completas:', q.answers);
-    console.log('correctIds:', correctIds);
-    console.log('userIds:', userIds);
+    // console.log('---');
+    // console.log('Pregunta:', q.id);
+    // console.log('Tipo:', q.type);
+    // console.log('Answers completas:', q.answers);
+    // console.log('correctIds:', correctIds);
+    // console.log('userIds:', userIds);
 
     if (q.type === 'single') {
       const isCorrect =
@@ -444,14 +444,14 @@ export default function Quiz() {
               </button>
             )}
 
-            {!result.passed && result.remaining_attempts === 0 && (
+            {/* {!result.passed && result.remaining_attempts === 0 && (
               <button
                 onClick={handleResetActivity}
                 className={styles.retryButton}
               >
                 🧹 Reiniciar Actividad
               </button>
-            )}
+            )} */}
           </div>
         </div>
       </div>
