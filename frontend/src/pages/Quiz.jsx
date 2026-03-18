@@ -134,52 +134,74 @@ export default function Quiz() {
   }
 
   function handleAnswerChange(questionId, answerId, questionType) {
-    setAnswers((prev) => {
-      if (questionType === 'single') {
-        return {
-          ...prev,
-          [questionId]: [answerId],
-        };
-      }
+  const normalizedAnswerId = String(answerId);
 
-      const current = prev[questionId] || [];
-
-      if (current.includes(answerId)) {
-        return {
-          ...prev,
-          [questionId]: current.filter((id) => id !== answerId),
-        };
-      }
-
+  setAnswers((prev) => {
+    if (questionType === 'single') {
       return {
         ...prev,
-        [questionId]: [...current, answerId],
+        [questionId]: [normalizedAnswerId],
       };
-    });
-  }
+    }
+
+    const current = (prev[questionId] || []).map((id) => String(id));
+
+    if (current.includes(normalizedAnswerId)) {
+      return {
+        ...prev,
+        [questionId]: current.filter((id) => id !== normalizedAnswerId),
+      };
+    }
+
+    return {
+      ...prev,
+      [questionId]: [...current, normalizedAnswerId],
+    };
+  });
+}
 
   function evaluateQuiz() {
-    let correctCount = 0;
+  let correctCount = 0;
 
-    quiz.questions.forEach((q) => {
-      const correctIds = q.answers.filter((a) => a.isCorrect).map((a) => a.id);
-      const userIds = answers[q.id] || [];
+  quiz.questions.forEach((q) => {
+    const correctIds = q.answers
+      .filter((a) => a.isCorrect === true || a.is_correct === true)
+      .map((a) => String(a.id));
 
-      if (q.type === 'single') {
-        const isCorrect =
-          userIds.length === 1 && correctIds.includes(userIds[0]);
-        if (isCorrect) correctCount++;
-      } else if (q.type === 'multiple') {
-        const isAllCorrect =
-          userIds.length === correctIds.length &&
-          userIds.every((id) => correctIds.includes(id)) &&
-          correctIds.every((id) => userIds.includes(id));
-        if (isAllCorrect) correctCount++;
-      }
-    });
+    const userIds = (answers[q.id] || []).map((id) => String(id));
 
-    return correctCount;
-  }
+    console.log('---');
+    console.log('Pregunta:', q.id);
+    console.log('Tipo:', q.type);
+    console.log('Answers completas:', q.answers);
+    console.log('correctIds:', correctIds);
+    console.log('userIds:', userIds);
+
+    if (q.type === 'single') {
+      const isCorrect =
+        userIds.length === 1 && correctIds.length === 1 && userIds[0] === correctIds[0];
+
+      console.log('Resultado single:', isCorrect);
+
+      if (isCorrect) correctCount++;
+    } else if (q.type === 'multiple') {
+      const sortedCorrect = [...correctIds].sort();
+      const sortedUser = [...userIds].sort();
+
+      const isAllCorrect =
+        sortedUser.length === sortedCorrect.length &&
+        sortedUser.every((id, index) => id === sortedCorrect[index]);
+
+      console.log('Resultado multiple:', isAllCorrect);
+
+      if (isAllCorrect) correctCount++;
+    }
+  });
+
+  console.log('Total correctas:', correctCount, 'de', quiz.questions.length);
+
+  return correctCount;
+}
 
   async function handleSubmit(e) {
     e.preventDefault();
