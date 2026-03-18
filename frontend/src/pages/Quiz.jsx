@@ -13,18 +13,29 @@ function formatQuizTitle(name) {
   const withoutBracket = name.replace(/^\s*\[[^\]]+\]\s*/, '');
   const dashIndex = withoutBracket.indexOf(' - ');
 
-  if (dashIndex === -1) {
-    return withoutBracket.trim();
-  }
+  if (dashIndex === -1) return withoutBracket.trim();
 
   return withoutBracket.slice(dashIndex + 3).trim();
 }
 
+function buildInitialAnswers(quizData) {
+  const initialAnswers = {};
+  if (!quizData?.questions) return initialAnswers;
+
+  quizData.questions.forEach((q) => {
+    initialAnswers[q.id] = [];
+  });
+
+  return initialAnswers;
+}
+
 export default function Quiz() {
   const { postEvent, waitForMessage } = usePgEvent();
+  const { topicId } = useParams();
+
   const [restored, setRestored] = useState(false);
   const restoredState = useRef(null);
-  const { topicId } = useParams();
+
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
@@ -36,38 +47,45 @@ export default function Quiz() {
 
   const displayTitle = formatQuizTitle(quiz?.topic?.name);
 
-
-  // Restaurar estado desde PGEvent si existe
   useEffect(() => {
     let isMounted = true;
+
     (async () => {
-      // Espera mensaje inicial (si lo hay)
       const pgState = await waitForMessage(1000);
       console.log('[PGEvent] Estado recibido al iniciar actividad:', pgState);
+
       if (pgState && isMounted) {
         try {
           const parsed = JSON.parse(pgState);
           if (parsed?.data) {
             restoredState.current = parsed.data;
           }
-        } catch {}
+        } catch (err) {
+          console.warn('[PGEvent] No se pudo parsear el estado inicial:', err);
+        }
       }
-      setRestored(true);
+
+      if (isMounted) setRestored(true);
     })();
-    return () => { isMounted = false; };
-  }, [topicId]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [topicId, waitForMessage]);
 
   useEffect(() => {
     if (restored) {
       loadQuiz();
     }
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restored, topicId]);
 
-  // Agregar event listener para clicks en imágenes
   useEffect(() => {
     const handleImageClick = (e) => {
-      if (e.target.tagName === 'IMG' && e.target.closest(`.${styles.questionText}, .${styles.answerOption}`)) {
+      if (
+        e.target.tagName === 'IMG' &&
+        e.target.closest(`.${styles.questionText}, .${styles.answerOption}`)
+      ) {
         e.preventDefault();
         setLightboxImage(e.target.src);
       }
@@ -75,7 +93,7 @@ export default function Quiz() {
 
     document.addEventListener('click', handleImageClick);
     return () => document.removeEventListener('click', handleImageClick);
-  }, []);
+  }, [styles.questionText, styles.answerOption]);
 
   function closeLightbox() {
     setLightboxImage(null);
@@ -85,79 +103,96 @@ export default function Quiz() {
     try {
       setLoading(true);
       setError('');
+
       const data = await getQuiz(topicId);
       setQuiz(data);
 
-      // Restaurar respuestas y resultado si hay state previo
+      const initialAnswers = buildInitialAnswers(data);
+
       if (restoredState.current && restoredState.current.topicId === topicId) {
-        // Restaurar respuestas
-        if (restoredState.current.answers) {
-          setAnswers(restoredState.current.answers);
-        } else {
-          // Inicializar si no hay respuestas
-          const initialAnswers = {};
-          data.questions.forEach(q => {
-            initialAnswers[q.id] = [];
-          });
-          setAnswers(initialAnswers);
-        }
-        // Restaurar resultado si ya completó
+        setAnswers(restoredState.current.answers || initialAnswers);
+
         if (typeof restoredState.current.passed === 'boolean') {
           setResult({
             score_percent: restoredState.current.score_percent,
             attempt_number: restoredState.current.attempt_number,
             remaining_attempts: restoredState.current.remaining_attempts,
             passed: restoredState.current.passed,
-            // ...puedes agregar más campos si necesitas
           });
+        } else {
+          setResult(null);
         }
       } else {
-        // Inicializar estado de respuestas
-        const initialAnswers = {};
-        data.questions.forEach(q => {
-          initialAnswers[q.id] = [];
-        });
         setAnswers(initialAnswers);
+        setResult(null);
       }
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Error al cargar el cuestionario');
     } finally {
       setLoading(false);
     }
   }
 
   function handleAnswerChange(questionId, answerId, questionType) {
-    setAnswers(prev => {
+    setAnswers((prev) => {
       if (questionType === 'single') {
-        // Para single choice, reemplazar con la nueva selección
         return {
           ...prev,
-          [questionId]: [answerId]
+          [questionId]: [answerId],
         };
-      } else {
-        // Para multiple choice, toggle
-        const current = prev[questionId] || [];
-        if (current.includes(answerId)) {
-          return {
-            ...prev,
-            [questionId]: current.filter(id => id !== answerId)
-          };
-        } else {
-          return {
-            ...prev,
-            [questionId]: [...current, answerId]
-          };
-        }
       }
+
+      const current = prev[questionId] || [];
+
+      if (current.includes(answerId)) {
+        return {
+          ...prev,
+          [questionId]: current.filter((id) => id !== answerId),
+        };
+      }
+
+      return {
+        ...prev,
+        [questionId]: [...current, answerId],
+      };
     });
   }
 
-  // Nueva lógica: intentos solo con PGEvent
+  function evaluateQuiz() {
+    let correctCount = 0;
+
+    quiz.questions.forEach((q) => {
+      const correctIds = q.answers.filter((a) => a.isCorrect).map((a) => a.id);
+      const userIds = answers[q.id] || [];
+
+      if (q.type === 'single') {
+        const isCorrect =
+          userIds.length === 1 && correctIds.includes(userIds[0]);
+        if (isCorrect) correctCount++;
+      } else if (q.type === 'multiple') {
+        const isAllCorrect =
+          userIds.length === correctIds.length &&
+          userIds.every((id) => correctIds.includes(id)) &&
+          correctIds.every((id) => userIds.includes(id));
+        if (isAllCorrect) correctCount++;
+      }
+    });
+
+    return correctCount;
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
 
-    // Validar que todas las preguntas tengan respuesta
-    const unanswered = quiz.questions.filter(q => !answers[q.id] || answers[q.id].length === 0);
+    if (!quiz?.questions?.length) {
+      setError('No hay preguntas disponibles para responder');
+      return;
+    }
+
+    const unanswered = quiz.questions.filter(
+      (q) => !answers[q.id] || answers[q.id].length === 0
+    );
+
     if (unanswered.length > 0) {
       setError(`Debes responder todas las preguntas (${unanswered.length} sin responder)`);
       return;
@@ -167,37 +202,19 @@ export default function Quiz() {
       setSubmitting(true);
       setError('');
 
-      // Calcular intento actual
-      let attempt_number = 1;
-      if (restoredState.current && restoredState.current.attempt_number) {
-        attempt_number = restoredState.current.attempt_number + 1;
-      }
+      const previousAttemptNumber = restoredState.current?.attempt_number || 0;
+      const attempt_number = previousAttemptNumber + 1;
 
-      // Evaluar respuestas con logs
-      let correctCount = 0;
-      quiz.questions.forEach(q => {
-        const correctIds = q.answers.filter(a => a.isCorrect).map(a => a.id);
-        const userIds = answers[q.id] || [];
-        console.log('Pregunta:', q.id, 'Tipo:', q.type);
-        console.log('Respuestas correctas:', correctIds);
-        console.log('Respuestas usuario:', userIds);
-        if (q.type === 'single') {
-          const isCorrect = userIds.length === 1 && correctIds.includes(userIds[0]);
-          console.log('Resultado single:', isCorrect);
-          if (isCorrect) correctCount++;
-        } else if (q.type === 'multiple') {
-          const isAllCorrect =
-            userIds.length === correctIds.length &&
-            userIds.every(id => correctIds.includes(id)) &&
-            correctIds.every(id => userIds.includes(id));
-          console.log('Resultado multiple:', isAllCorrect);
-          if (isAllCorrect) correctCount++;
-        }
-      });
-      const score_percent = Number(((correctCount / quiz.questions.length) * 100).toFixed(2));
+      const correctCount = evaluateQuiz();
+      const score_percent = Number(
+        ((correctCount / quiz.questions.length) * 100).toFixed(2)
+      );
+
       const passed = score_percent >= 70;
       const maxAttempts = 3;
-      const remaining_attempts = passed ? 0 : Math.max(0, maxAttempts - attempt_number);
+      const remaining_attempts = passed
+        ? Math.max(0, maxAttempts - attempt_number)
+        : Math.max(0, maxAttempts - attempt_number);
 
       const resultData = {
         score_percent,
@@ -205,44 +222,47 @@ export default function Quiz() {
         remaining_attempts,
         passed,
       };
-      setResult(resultData);
-      setCurrentQuestionIndex(0);
 
-      // Evento PG
       const stateToPost = {
         ...resultData,
         topicId,
         answers,
         quizId: quiz?.id,
-        questions: quiz?.questions?.map(q => ({ id: q.id, type: q.type })),
+        questions: quiz?.questions?.map((q) => ({
+          id: q.id,
+          type: q.type,
+        })),
       };
+
+      setResult(resultData);
+      setCurrentQuestionIndex(0);
+      restoredState.current = stateToPost;
+
       if (passed) {
         postEvent(
-          "SUCCESS",
-          "Has completado el ejercicio",
+          'SUCCESS',
+          'Has completado el ejercicio',
           [],
           stateToPost
         );
       } else {
-        let reasons = [];
-        let message = "";
-        if (remaining_attempts === 0) {
-          reasons = ["Lo sentimos no hay más intentos"];
-          message = "El ejercicio está incompleto y no quedan más intentos";
-        } else {
-          reasons = [
-            `Revisa tus respuestas - te quedan ${remaining_attempts} intento${remaining_attempts > 1 ? 's' : ''}`
-          ];
-          message = "El ejercicio está incompleto";
-        }
+        const noMoreAttempts = remaining_attempts === 0;
+
         postEvent(
-          "FAILURE",
-          message,
-          reasons,
+          'FAILURE',
+          noMoreAttempts
+            ? 'El ejercicio está incompleto y no quedan más intentos'
+            : 'El ejercicio está incompleto',
+          noMoreAttempts
+            ? ['Lo sentimos no hay más intentos']
+            : [
+                `Revisa tus respuestas - te quedan ${remaining_attempts} intento${remaining_attempts > 1 ? 's' : ''}`,
+              ],
           stateToPost
         );
       }
     } catch (err) {
+      console.error(err);
       setError('Error al procesar el intento');
     } finally {
       setSubmitting(false);
@@ -250,40 +270,85 @@ export default function Quiz() {
   }
 
   function handleRetry() {
-    // Descuenta el intento manualmente
-    let attempt_number = 1;
-    if (restoredState.current && restoredState.current.attempt_number) {
-      attempt_number = restoredState.current.attempt_number + 1;
-    }
+    if (!quiz) return;
+
+    const initialAnswers = buildInitialAnswers(quiz);
+    const currentAttemptNumber = restoredState.current?.attempt_number || 0;
+    const currentRemainingAttempts =
+      typeof restoredState.current?.remaining_attempts === 'number'
+        ? restoredState.current.remaining_attempts
+        : 3;
+
+    const nextState = {
+      topicId,
+      quizId: quiz?.id,
+      answers: initialAnswers,
+      attempt_number: currentAttemptNumber,
+      remaining_attempts: currentRemainingAttempts,
+      passed: false,
+      questions: quiz?.questions?.map((q) => ({
+        id: q.id,
+        type: q.type,
+      })),
+    };
+
     setResult(null);
-    setAnswers({});
+    setAnswers(initialAnswers);
     setCurrentQuestionIndex(0);
-    // Actualiza el estado de pgEvent para reflejar el nuevo intento
+    setError('');
+
+    restoredState.current = nextState;
+
+    // No descontamos intento acá. Solo limpiamos estado para un nuevo envío real.
     postEvent(
-      "FAILURE",
-      "Intento manual descontado",
+      'FAILURE',
+      'Reintento iniciado',
       [],
-      {
-        attempt_number,
-        answers: {},
-        topicId,
-        quizId: quiz?.id,
-        questions: quiz?.questions?.map(q => ({ id: q.id, type: q.type }))
-      }
+      nextState
     );
-    loadQuiz();
+  }
+
+  function handleResetActivity() {
+    if (!quiz) return;
+
+    const initialAnswers = buildInitialAnswers(quiz);
+
+    setResult(null);
+    setAnswers(initialAnswers);
+    setCurrentQuestionIndex(0);
+    setError('');
+
+    restoredState.current = {
+      topicId,
+      quizId: quiz?.id,
+      answers: initialAnswers,
+      attempt_number: 0,
+      remaining_attempts: 3,
+      passed: false,
+      questions: quiz?.questions?.map((q) => ({
+        id: q.id,
+        type: q.type,
+      })),
+    };
+
+    postEvent(
+      'FAILURE',
+      'Reinicio manual de la actividad',
+      [],
+      restoredState.current
+    );
   }
 
   function handleNext() {
     if (currentQuestionIndex < quiz.questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
+      setCurrentQuestionIndex((prev) => prev + 1);
       setError('');
     }
   }
 
   function handlePrevious() {
     if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(prev => prev - 1);
+      setCurrentQuestionIndex((prev) => prev - 1);
       setError('');
     }
   }
@@ -300,29 +365,35 @@ export default function Quiz() {
     );
   }
 
-  // Mostrar resultados
   if (result) {
     return (
       <div className={styles.quiz}>
         <div className={styles.results}>
           <h3>{displayTitle}</h3>
-          
-          <div className={`${styles.scoreDisplay} ${result.passed ? styles.passed : styles.failed}`}>
+
+          <div
+            className={`${styles.scoreDisplay} ${
+              result.passed ? styles.passed : styles.failed
+            }`}
+          >
             {result.score_percent}%
           </div>
 
-          <div className={`${styles.resultBadge} ${result.passed ? styles.passed : styles.failed}`}>
+          <div
+            className={`${styles.resultBadge} ${
+              result.passed ? styles.passed : styles.failed
+            }`}
+          >
             {result.passed ? '✓ APROBADO' : '✗ NO APROBADO'}
           </div>
 
-          {/* Solo mostrar info de intentos si NO está aprobado */}
           {!result.passed && (
             <div className={styles.attemptsInfo}>
-              Intento {result.attempt_number} de 3<br />
-              {result.remaining_attempts > 0 
+              Intento {result.attempt_number} de 3
+              <br />
+              {result.remaining_attempts > 0
                 ? `Te quedan ${result.remaining_attempts} intento${result.remaining_attempts > 1 ? 's' : ''}`
-                : 'No te quedan más intentos'
-              }
+                : 'No te quedan más intentos'}
             </div>
           )}
 
@@ -345,28 +416,15 @@ export default function Quiz() {
           )}
 
           <div className={styles.resultsActions}>
-            {/* Solo mostrar botón de reintentar si NO está aprobado */}
             {!result.passed && result.remaining_attempts > 0 && (
               <button onClick={handleRetry} className={styles.retryButton}>
                 🔄 Intentar de Nuevo
               </button>
             )}
-            {/* Botón de reset solo si no hay más intentos */}
+
             {!result.passed && result.remaining_attempts === 0 && (
               <button
-                onClick={() => {
-                  setResult(null);
-                  setAnswers({});
-                  setCurrentQuestionIndex(0);
-                  // Enviar evento PGEvent de reset (state vacío)
-                  postEvent(
-                    "FAILURE",
-                    "Reinicio manual de la actividad",
-                    [],
-                    {} // state vacío
-                  );
-                  loadQuiz();
-                }}
+                onClick={handleResetActivity}
                 className={styles.retryButton}
               >
                 🧹 Reiniciar Actividad
@@ -378,12 +436,12 @@ export default function Quiz() {
     );
   }
 
-  // Mostrar cuestionario
   const currentQuestion = quiz.questions[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === quiz.questions.length - 1;
   const isFirstQuestion = currentQuestionIndex === 0;
   const totalQuestions = quiz.questions.length;
   const currentNumber = currentQuestionIndex + 1;
+  const answeredCount = Object.values(answers).filter((a) => a.length > 0).length;
 
   return (
     <div className={styles.quiz}>
@@ -394,15 +452,15 @@ export default function Quiz() {
         </p>
       </div>
 
-      {/* Indicador de Progreso */}
       <div className={styles.progressText}>
-        <span>{Object.values(answers).filter(a => a.length > 0).length}</span> de {totalQuestions} preguntas respondidas
+        <span>{answeredCount}</span> de {totalQuestions} preguntas respondidas
       </div>
+
       <div className={styles.progressContainer}>
-        <div 
+        <div
           className={styles.progressBar}
-          style={{ 
-            width: `${(Object.values(answers).filter(a => a.length > 0).length / totalQuestions) * 100}%` 
+          style={{
+            width: `${(answeredCount / totalQuestions) * 100}%`,
           }}
         />
       </div>
@@ -420,7 +478,7 @@ export default function Quiz() {
             </span>
           </div>
 
-          <div 
+          <div
             className={styles.questionText}
             dangerouslySetInnerHTML={{ __html: currentQuestion.text }}
           />
@@ -433,10 +491,16 @@ export default function Quiz() {
                   id={`answer-${answer.id}`}
                   name={`question-${currentQuestion.id}`}
                   checked={answers[currentQuestion.id]?.includes(answer.id) || false}
-                  onChange={() => handleAnswerChange(currentQuestion.id, answer.id, currentQuestion.type)}
+                  onChange={() =>
+                    handleAnswerChange(
+                      currentQuestion.id,
+                      answer.id,
+                      currentQuestion.type
+                    )
+                  }
                   disabled={submitting}
                 />
-                <label 
+                <label
                   htmlFor={`answer-${answer.id}`}
                   dangerouslySetInnerHTML={{ __html: answer.text }}
                 />
@@ -445,7 +509,6 @@ export default function Quiz() {
           </ul>
         </div>
 
-        {/* Navegación */}
         <div className={styles.navigationButtons}>
           <button
             type="button"
@@ -465,8 +528,8 @@ export default function Quiz() {
               Siguiente →
             </button>
           ) : (
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className={styles.submitButton}
               disabled={submitting}
             >
@@ -476,10 +539,12 @@ export default function Quiz() {
         </div>
       </form>
 
-      {/* Lightbox para ampliar imágenes */}
       {lightboxImage && (
         <div className={styles.lightbox} onClick={closeLightbox}>
-          <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+          <div
+            className={styles.lightboxContent}
+            onClick={(e) => e.stopPropagation()}
+          >
             <button className={styles.lightboxClose} onClick={closeLightbox}>
               ✕
             </button>
