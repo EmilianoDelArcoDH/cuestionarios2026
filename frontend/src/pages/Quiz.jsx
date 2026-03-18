@@ -323,6 +323,27 @@ export default function Quiz() {
                 🔄 Intentar de Nuevo
               </button>
             )}
+            {/* Botón de reset solo si no hay más intentos */}
+            {!result.passed && result.remaining_attempts === 0 && (
+              <button
+                onClick={() => {
+                  setResult(null);
+                  setAnswers({});
+                  setCurrentQuestionIndex(0);
+                  // Enviar evento PGEvent de reset (state vacío)
+                  postEvent(
+                    "RESET",
+                    "Reinicio manual de la actividad",
+                    [],
+                    {} // state vacío
+                  );
+                  loadQuiz();
+                }}
+                className={styles.retryButton}
+              >
+                🧹 Reiniciar Actividad
+              </button>
+            )}
           </div>
         </div>
       </div>
