@@ -253,9 +253,27 @@ export default function Quiz() {
   }
 
   function handleRetry() {
+    // Descuenta el intento manualmente
+    let attempt_number = 1;
+    if (restoredState.current && restoredState.current.attempt_number) {
+      attempt_number = restoredState.current.attempt_number + 1;
+    }
     setResult(null);
     setAnswers({});
     setCurrentQuestionIndex(0);
+    // Actualiza el estado de pgEvent para reflejar el nuevo intento
+    postEvent(
+      "RETRY",
+      "Intento manual descontado",
+      [],
+      {
+        attempt_number,
+        answers: {},
+        topicId,
+        quizId: quiz?.id,
+        questions: quiz?.questions?.map(q => ({ id: q.id, type: q.type }))
+      }
+    );
     loadQuiz();
   }
 
