@@ -219,7 +219,8 @@ export async function getQuiz(topicId) {
     type: question.type,
     answers: shuffle(dedupeAnswersForQuiz(question.answers)).map(answer => ({
       id: answer.id,
-      text: answer.text
+      text: answer.text,
+      isCorrect: answer.isCorrect
       // NO enviar is_correct al frontend
     }))
   }));

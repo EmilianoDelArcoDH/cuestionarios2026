@@ -54,17 +54,17 @@ export async function getQuiz(topicId) {
   return handleResponse(response);
 }
 
-/**
- * Enviar respuestas de un intento
- */
-export async function submitAttempt(topicId, answers) {
-  const response = await fetch(`${API_BASE_URL}/topics/${topicId}/attempts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ answers })
-  });
-  return handleResponse(response);
-}
+// /**
+//  * Enviar respuestas de un intento
+//  */
+// export async function submitAttempt(topicId, answers) {
+//   const response = await fetch(`${API_BASE_URL}/topics/${topicId}/attempts`, {
+//     method: 'POST',
+//     headers: { 'Content-Type': 'application/json' },
+//     body: JSON.stringify({ answers })
+//   });
+//   return handleResponse(response);
+// }
 
 /**
  * Obtener intentos de un tema
