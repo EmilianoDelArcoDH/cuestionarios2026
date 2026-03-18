@@ -134,74 +134,75 @@ export default function Quiz() {
   }
 
   function handleAnswerChange(questionId, answerId, questionType) {
-  const normalizedAnswerId = String(answerId);
+    const normalizedAnswerId = String(answerId);
 
-  setAnswers((prev) => {
-    if (questionType === 'single') {
+    setAnswers((prev) => {
+      if (questionType === 'single') {
+        return {
+          ...prev,
+          [questionId]: [normalizedAnswerId],
+        };
+      }
+
+      const current = (prev[questionId] || []).map((id) => String(id));
+
+      if (current.includes(normalizedAnswerId)) {
+        return {
+          ...prev,
+          [questionId]: current.filter((id) => id !== normalizedAnswerId),
+        };
+      }
+
       return {
         ...prev,
-        [questionId]: [normalizedAnswerId],
+        [questionId]: [...current, normalizedAnswerId],
       };
-    }
-
-    const current = (prev[questionId] || []).map((id) => String(id));
-
-    if (current.includes(normalizedAnswerId)) {
-      return {
-        ...prev,
-        [questionId]: current.filter((id) => id !== normalizedAnswerId),
-      };
-    }
-
-    return {
-      ...prev,
-      [questionId]: [...current, normalizedAnswerId],
-    };
-  });
-}
+    });
+  }
 
   function evaluateQuiz() {
-  let correctCount = 0;
+    let totalScore = 0;
 
-  quiz.questions.forEach((q) => {
-    const correctIds = q.answers
-      .filter((a) => a.isCorrect === true || a.is_correct === true)
-      .map((a) => String(a.id));
+    quiz.questions.forEach((q) => {
+      const correctIds = q.answers
+        .filter((a) => a.isCorrect === true)
+        .map((a) => String(a.id));
 
-    const userIds = (answers[q.id] || []).map((id) => String(id));
+      const incorrectIds = q.answers
+        .filter((a) => a.isCorrect !== true)
+        .map((a) => String(a.id));
 
-    // console.log('---');
-    // console.log('Pregunta:', q.id);
-    // console.log('Tipo:', q.type);
-    // console.log('Answers completas:', q.answers);
-    // console.log('correctIds:', correctIds);
-    // console.log('userIds:', userIds);
+      const userIds = (answers[q.id] || []).map((id) => String(id));
 
-    if (q.type === 'single') {
-      const isCorrect =
-        userIds.length === 1 && correctIds.length === 1 && userIds[0] === correctIds[0];
+      if (q.type === 'single') {
+        const isCorrect =
+          userIds.length === 1 &&
+          correctIds.length === 1 &&
+          userIds[0] === correctIds[0];
 
-      console.log('Resultado single:', isCorrect);
+        if (isCorrect) {
+          totalScore += 1;
+        }
+      } else if (q.type === 'multiple') {
+        if (correctIds.length === 0) return;
 
-      if (isCorrect) correctCount++;
-    } else if (q.type === 'multiple') {
-      const sortedCorrect = [...correctIds].sort();
-      const sortedUser = [...userIds].sort();
+        const selectedCorrect = userIds.filter((id) => correctIds.includes(id)).length;
+        const selectedIncorrect = userIds.filter((id) => incorrectIds.includes(id)).length;
 
-      const isAllCorrect =
-        sortedUser.length === sortedCorrect.length &&
-        sortedUser.every((id, index) => id === sortedCorrect[index]);
+        // Puntaje proporcional:
+        // + por correctas elegidas
+        // - por incorrectas elegidas
+        let questionScore = (selectedCorrect - selectedIncorrect) / correctIds.length;
 
-      console.log('Resultado multiple:', isAllCorrect);
+        // Nunca menos de 0 ni más de 1
+        questionScore = Math.max(0, Math.min(1, questionScore));
 
-      if (isAllCorrect) correctCount++;
-    }
-  });
+        totalScore += questionScore;
+      }
+    });
 
-  console.log('Total correctas:', correctCount, 'de', quiz.questions.length);
-
-  return correctCount;
-}
+    return totalScore;
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -227,10 +228,8 @@ export default function Quiz() {
       const previousAttemptNumber = restoredState.current?.attempt_number || 0;
       const attempt_number = previousAttemptNumber + 1;
 
-      const correctCount = evaluateQuiz();
-      const score_percent = Number(
-        ((correctCount / quiz.questions.length) * 100).toFixed(2)
-      );
+      const totalScore = evaluateQuiz();
+      const score_percent = Number(((totalScore / quiz.questions.length) * 100).toFixed(2));
 
       const passed = score_percent >= 70;
       const maxAttempts = 3;
@@ -278,8 +277,8 @@ export default function Quiz() {
           noMoreAttempts
             ? ['Lo sentimos no hay más intentos']
             : [
-                `Revisa tus respuestas - te quedan ${remaining_attempts} intento${remaining_attempts > 1 ? 's' : ''}`,
-              ],
+              `Revisa tus respuestas - te quedan ${remaining_attempts} intento${remaining_attempts > 1 ? 's' : ''}`,
+            ],
           stateToPost
         );
       }
@@ -394,17 +393,15 @@ export default function Quiz() {
           <h3>{displayTitle}</h3>
 
           <div
-            className={`${styles.scoreDisplay} ${
-              result.passed ? styles.passed : styles.failed
-            }`}
+            className={`${styles.scoreDisplay} ${result.passed ? styles.passed : styles.failed
+              }`}
           >
             {result.score_percent}%
           </div>
 
           <div
-            className={`${styles.resultBadge} ${
-              result.passed ? styles.passed : styles.failed
-            }`}
+            className={`${styles.resultBadge} ${result.passed ? styles.passed : styles.failed
+              }`}
           >
             {result.passed ? '✓ APROBADO' : '✗ NO APROBADO'}
           </div>
