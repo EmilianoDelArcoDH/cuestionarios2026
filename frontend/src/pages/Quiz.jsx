@@ -173,28 +173,25 @@ export default function Quiz() {
         attempt_number = restoredState.current.attempt_number + 1;
       }
 
-      // Evaluar respuestas
+      // Evaluar respuestas con logs
       let correctCount = 0;
       quiz.questions.forEach(q => {
         const correctIds = q.answers.filter(a => a.isCorrect).map(a => a.id);
         const userIds = answers[q.id] || [];
-        // Para preguntas simples (single): debe haber solo una respuesta y debe ser correcta
+        console.log('Pregunta:', q.id, 'Tipo:', q.type);
+        console.log('Respuestas correctas:', correctIds);
+        console.log('Respuestas usuario:', userIds);
         if (q.type === 'single') {
-          if (
-            userIds.length === 1 &&
-            correctIds.includes(userIds[0])
-          ) {
-            correctCount++;
-          }
+          const isCorrect = userIds.length === 1 && correctIds.includes(userIds[0]);
+          console.log('Resultado single:', isCorrect);
+          if (isCorrect) correctCount++;
         } else if (q.type === 'multiple') {
-          // Para preguntas múltiples: todas las respuestas correctas deben estar seleccionadas y no debe haber extras
           const isAllCorrect =
             userIds.length === correctIds.length &&
             userIds.every(id => correctIds.includes(id)) &&
             correctIds.every(id => userIds.includes(id));
-          if (isAllCorrect) {
-            correctCount++;
-          }
+          console.log('Resultado multiple:', isAllCorrect);
+          if (isAllCorrect) correctCount++;
         }
       });
       const score_percent = Number(((correctCount / quiz.questions.length) * 100).toFixed(2));
