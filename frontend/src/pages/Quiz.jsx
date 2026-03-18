@@ -263,7 +263,7 @@ export default function Quiz() {
     setCurrentQuestionIndex(0);
     // Actualiza el estado de pgEvent para reflejar el nuevo intento
     postEvent(
-      "RETRY",
+      "FAILURE",
       "Intento manual descontado",
       [],
       {
@@ -363,7 +363,7 @@ export default function Quiz() {
                   setCurrentQuestionIndex(0);
                   // Enviar evento PGEvent de reset (state vacío)
                   postEvent(
-                    "RESET",
+                    "FAILURE",
                     "Reinicio manual de la actividad",
                     [],
                     {} // state vacío
