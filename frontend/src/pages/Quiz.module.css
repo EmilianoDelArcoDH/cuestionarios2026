@@ -10,8 +10,8 @@
   margin: 0 auto;
   height: 100%;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
+  /* display: flex;
+  flex-direction: column; */
   overflow: visible;
   box-sizing: border-box;
 }
@@ -63,9 +63,9 @@
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  height: 290px;
-  min-height: 290px;
-  max-height: 290px;
+  height: 460px;
+  min-height: 460px;
+  max-height: 460px;
   width: 100%;
   display: flex;
   flex-direction: column;
