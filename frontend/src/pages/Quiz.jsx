@@ -512,7 +512,7 @@ export default function Quiz() {
                   type={currentQuestion.type === 'single' ? 'radio' : 'checkbox'}
                   id={`answer-${answer.id}`}
                   name={`question-${currentQuestion.id}`}
-                  checked={answers[currentQuestion.id]?.includes(answer.id) || false}
+                  checked={(answers[currentQuestion.id] || []).map(String).includes(String(answer.id))}
                   onChange={() =>
                     handleAnswerChange(
                       currentQuestion.id,
