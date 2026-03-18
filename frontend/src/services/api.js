@@ -48,6 +48,9 @@ export async function createQuestion(topicId, questionData) {
  */
 export async function getQuiz(topicId) {
   const response = await fetch(`${API_BASE_URL}/topics/${topicId}/quiz`);
+    const data = await response.json();
+
+  console.log("🔥 RESPUESTA COMPLETA DEL BACK:", data);
   return handleResponse(response);
 }
 
