@@ -12,7 +12,7 @@ export default function CreateTopic() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    
+
     if (!name.trim()) {
       setError('El nombre es requerido');
       return;
@@ -22,13 +22,12 @@ export default function CreateTopic() {
       setLoading(true);
       setError('');
       setSuccess('');
-      
+
       const topic = await createTopic(name, []);
-      
-      setSuccess(`Tema "${topic.name}" creado/encontrado exitosamente`);
+
+      setSuccess(`Tema "${topic.name}" creado o encontrado exitosamente`);
       setName('');
-      
-      // Redirigir después de 2 segundos
+
       setTimeout(() => {
         navigate('/');
       }, 2000);
@@ -41,34 +40,52 @@ export default function CreateTopic() {
 
   return (
     <div className={styles.createTopic}>
-      <h2>Crear Tema</h2>
+      <section className={styles.hero}>
+        <div>
+          <p className={styles.eyebrow}>Nuevo tema</p>
+          <h2>Crear un tema</h2>
+          <p className={styles.heroText}>
+            Define el nombre del tema para empezar a cargar preguntas y organizar el contenido.
+          </p>
+        </div>
+        <div className={styles.heroBadge}>1 paso</div>
+      </section>
 
       {error && <div className="error-message">{error}</div>}
       {success && <div className="success-message">{success}</div>}
 
-      <form onSubmit={handleSubmit}>
-        <div className={styles.formGroup}>
-          <label htmlFor="name">Nombre del Tema</label>
-          <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ej: JavaScript Básico"
-            disabled={loading}
-          />
+      <section className={styles.formCard}>
+        <div className={styles.sectionHeader}>
+          <h3>Informacion principal</h3>
+          <p>Usa un nombre claro para identificar el tema rapidamente.</p>
         </div>
 
-        <button 
-          type="submit" 
-          className={styles.buttonPrimary}
-          disabled={loading}
-        >
-          {loading ? 'Creando...' : 'Crear Tema'}
-        </button>
-      </form>
+        <form onSubmit={handleSubmit}>
+          <div className={styles.formGroup}>
+            <label htmlFor="name">Nombre del tema</label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ej: JavaScript Basico"
+              disabled={loading}
+            />
+          </div>
 
-      <Link to="/" className={styles.backLink}>← Volver al inicio</Link>
+          <div className={styles.actions}>
+            <button
+              type="submit"
+              className={styles.buttonPrimary}
+              disabled={loading}
+            >
+              {loading ? 'Creando...' : 'Crear tema'}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <Link to="/" className={styles.backLink}>Volver al inicio</Link>
     </div>
   );
 }

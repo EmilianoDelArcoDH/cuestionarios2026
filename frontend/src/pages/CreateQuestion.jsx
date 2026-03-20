@@ -6,7 +6,7 @@ import styles from './CreateQuestion.module.css';
 export default function CreateQuestion() {
   const [searchParams] = useSearchParams();
   const topicIdFromUrl = searchParams.get('topicId');
-  
+
   const [topics, setTopics] = useState([]);
   const [selectedTopicId, setSelectedTopicId] = useState('');
   const [text, setText] = useState('');
@@ -51,8 +51,7 @@ export default function CreateQuestion() {
   function updateAnswer(index, field, value) {
     const newAnswers = [...answers];
     newAnswers[index][field] = value;
-    
-    // Si es tipo single y se marca una como correcta, desmarcar las demás
+
     if (field === 'is_correct' && value === true && type === 'single') {
       newAnswers.forEach((ans, i) => {
         if (i !== index) {
@@ -60,13 +59,13 @@ export default function CreateQuestion() {
         }
       });
     }
-    
+
     setAnswers(newAnswers);
   }
 
-  function buildHtmlWithImage(text, imageUrl) {
-    if (!imageUrl) return text;
-    return `${text}\n<img src="${imageUrl}" alt="imagen">`;
+  function buildHtmlWithImage(answerText, answerImageUrl) {
+    if (!answerImageUrl) return answerText;
+    return `${answerText}\n<img src="${answerImageUrl}" alt="imagen">`;
   }
 
   async function handleSubmit(e) {
@@ -82,17 +81,17 @@ export default function CreateQuestion() {
       return;
     }
 
-    const filledAnswers = answers.filter(a => a.text.trim());
-    
+    const filledAnswers = answers.filter((answer) => answer.text.trim());
+
     if (filledAnswers.length < 2) {
       setError('Debe haber al menos 2 respuestas');
       return;
     }
 
-    const correctCount = filledAnswers.filter(a => a.is_correct).length;
-    
+    const correctCount = filledAnswers.filter((answer) => answer.is_correct).length;
+
     if (type === 'single' && correctCount !== 1) {
-      setError('Las preguntas de tipo "single" deben tener exactamente 1 respuesta correcta');
+      setError('Las preguntas de tipo single deben tener exactamente 1 respuesta correcta');
       return;
     }
 
@@ -109,15 +108,13 @@ export default function CreateQuestion() {
       await createQuestion(selectedTopicId, {
         text: buildHtmlWithImage(text, imageUrl),
         type,
-        answers: filledAnswers.map(a => ({
-          text: buildHtmlWithImage(a.text, a.imageUrl),
-          is_correct: a.is_correct
+        answers: filledAnswers.map((answer) => ({
+          text: buildHtmlWithImage(answer.text, answer.imageUrl),
+          is_correct: answer.is_correct
         }))
       });
 
       setSuccess('Pregunta creada exitosamente');
-      
-      // Reset form
       setText('');
       setImageUrl('');
       setAnswers([
@@ -134,12 +131,22 @@ export default function CreateQuestion() {
   if (topics.length === 0) {
     return (
       <div className={styles.createQuestion}>
-        <h2>Crear Pregunta</h2>
+        <section className={styles.hero}>
+          <div>
+            <p className={styles.eyebrow}>Nueva pregunta</p>
+            <h2>Crear una pregunta</h2>
+            <p className={styles.heroText}>
+              Necesitas al menos un tema para poder asociar la pregunta.
+            </p>
+          </div>
+        </section>
+
         <div className="error-message">
           No hay temas disponibles. Debes crear un tema primero.
         </div>
+
         <Link to="/create-topic" className={styles.backLink}>
-          → Crear Tema
+          Ir a crear tema
         </Link>
       </div>
     );
@@ -147,111 +154,131 @@ export default function CreateQuestion() {
 
   return (
     <div className={styles.createQuestion}>
-      <h2>Crear Pregunta</h2>
+      <section className={styles.hero}>
+        <div>
+          <p className={styles.eyebrow}>Nueva pregunta</p>
+          <h2>Crear una pregunta</h2>
+          <p className={styles.heroText}>
+            Completa los datos principales, define el tipo de respuesta y agrega las opciones.
+          </p>
+        </div>
+        <div className={styles.heroBadge}>{answers.length} respuestas</div>
+      </section>
 
       {error && <div className="error-message">{error}</div>}
       {success && <div className="success-message">{success}</div>}
 
-      <form onSubmit={handleSubmit}>
-        <div className={styles.formGroup}>
-          <label htmlFor="topic">Tema</label>
-          <select
-            id="topic"
-            value={selectedTopicId}
-            onChange={(e) => setSelectedTopicId(e.target.value)}
-            disabled={loading}
-          >
-            {topics.map((topic) => (
-              <option key={topic.id} value={topic.id}>
-                {topic.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="text">Texto de la Pregunta</label>
-          <textarea
-            id="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Escribe la pregunta aquí..."
-            rows="3"
-            disabled={loading}
-          />
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="imageUrl">URL de Imagen (opcional)</label>
-          <input
-            type="text"
-            id="imageUrl"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://ejemplo.com/imagen.jpg"
-            disabled={loading}
-          />
-          {imageUrl && (
-            <div className={styles.imagePreview}>
-              <img src={imageUrl} alt="Vista previa de la pregunta" />
-            </div>
-          )}
-        </div>
-
-        <div className={styles.formGroup}>
-          <label htmlFor="type">Tipo de Pregunta</label>
-          <select
-            id="type"
-            value={type}
-            onChange={(e) => {
-              setType(e.target.value);
-              // Si cambia a single, asegurar que solo haya una correcta
-              if (e.target.value === 'single') {
-                const correctIndex = answers.findIndex(a => a.is_correct);
-                setAnswers(answers.map((a, i) => ({
-                  ...a,
-                  is_correct: i === Math.max(0, correctIndex)
-                })));
-              }
-            }}
-            disabled={loading}
-          >
-            <option value="single">Selección Única (Radio)</option>
-            <option value="multiple">Selección Múltiple (Checkbox)</option>
-          </select>
-          <div className={styles.validationInfo}>
-            {type === 'single' 
-              ? '💡 Debe haber exactamente 1 respuesta correcta'
-              : '💡 Puede haber más de 1 respuesta correcta'
-            }
+      <form onSubmit={handleSubmit} className={styles.formLayout}>
+        <section className={styles.formCard}>
+          <div className={styles.sectionHeader}>
+            <h3>Informacion de la pregunta</h3>
+            <p>Selecciona el tema y escribe el contenido principal.</p>
           </div>
-        </div>
 
-        <div className={styles.answersSection}>
-          <h3>Respuestas</h3>
-          
-          {answers.map((answer, index) => (
-            <div key={index} className={styles.answerItemFull}>
-              <div className={styles.answerRow}>
-                <input
-                  type="text"
-                  value={answer.text}
-                  onChange={(e) => updateAnswer(index, 'text', e.target.value)}
-                  placeholder={`Respuesta ${index + 1}`}
-                  disabled={loading}
-                  className={styles.answerTextInput}
-                />
-                
-                <div className={styles.answerControls}>
-                  <input
-                    type="checkbox"
-                    id={`correct-${index}`}
-                    checked={answer.is_correct}
-                    onChange={(e) => updateAnswer(index, 'is_correct', e.target.checked)}
-                    disabled={loading}
-                  />
-                  <label htmlFor={`correct-${index}`}>Correcta</label>
+          <div className={styles.formGroup}>
+            <label htmlFor="topic">Tema</label>
+            <select
+              id="topic"
+              value={selectedTopicId}
+              onChange={(e) => setSelectedTopicId(e.target.value)}
+              disabled={loading}
+            >
+              {topics.map((topic) => (
+                <option key={topic.id} value={topic.id}>
+                  {topic.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
+          <div className={styles.formGroup}>
+            <label htmlFor="text">Texto de la pregunta</label>
+            <textarea
+              id="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Escribe la pregunta aqui..."
+              rows="4"
+              disabled={loading}
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="imageUrl">Imagen de apoyo</label>
+            <input
+              type="text"
+              id="imageUrl"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://ejemplo.com/imagen.jpg"
+              disabled={loading}
+            />
+            {imageUrl && (
+              <div className={styles.imagePreview}>
+                <img src={imageUrl} alt="Vista previa de la pregunta" />
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className={styles.formCard}>
+          <div className={styles.sectionHeader}>
+            <h3>Configuracion</h3>
+            <p>Define como debe responderse la pregunta.</p>
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="type">Tipo de pregunta</label>
+            <select
+              id="type"
+              value={type}
+              onChange={(e) => {
+                setType(e.target.value);
+                if (e.target.value === 'single') {
+                  const correctIndex = answers.findIndex((answer) => answer.is_correct);
+                  setAnswers(
+                    answers.map((answer, index) => ({
+                      ...answer,
+                      is_correct: index === Math.max(0, correctIndex)
+                    }))
+                  );
+                }
+              }}
+              disabled={loading}
+            >
+              <option value="single">Seleccion unica</option>
+              <option value="multiple">Seleccion multiple</option>
+            </select>
+            <div className={styles.validationInfo}>
+              {type === 'single'
+                ? 'Debe haber exactamente 1 respuesta correcta.'
+                : 'Puede haber mas de 1 respuesta correcta.'}
+            </div>
+          </div>
+        </section>
+
+        <section className={`${styles.formCard} ${styles.answersSection}`}>
+          <div className={styles.answersHeader}>
+            <div className={styles.sectionHeader}>
+              <h3>Respuestas</h3>
+              <p>Agrega opciones claras y marca las correctas.</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={addAnswer}
+              className={styles.addAnswerButton}
+              disabled={loading}
+            >
+              + Agregar respuesta
+            </button>
+          </div>
+
+          <div className={styles.answersList}>
+            {answers.map((answer, index) => (
+              <div key={index} className={styles.answerItemFull}>
+                <div className={styles.answerTop}>
+                  <div className={styles.answerBadge}>Respuesta {index + 1}</div>
                   {answers.length > 2 && (
                     <button
                       type="button"
@@ -259,50 +286,64 @@ export default function CreateQuestion() {
                       className={styles.removeButton}
                       disabled={loading}
                     >
-                      ✕
+                      Quitar
                     </button>
                   )}
                 </div>
-              </div>
-              
-              <div className={styles.answerImageRow}>
-                <input
-                  type="text"
-                  value={answer.imageUrl || ''}
-                  onChange={(e) => updateAnswer(index, 'imageUrl', e.target.value)}
-                  placeholder="URL de imagen (opcional)"
-                  disabled={loading}
-                  className={styles.answerImageInput}
-                />
-                {answer.imageUrl && (
-                  <div className={styles.answerImagePreview}>
-                    <img src={answer.imageUrl} alt={`Vista previa ${index + 1}`} />
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
 
+                <div className={styles.answerRow}>
+                  <input
+                    type="text"
+                    value={answer.text}
+                    onChange={(e) => updateAnswer(index, 'text', e.target.value)}
+                    placeholder={`Texto de la respuesta ${index + 1}`}
+                    disabled={loading}
+                    className={styles.answerTextInput}
+                  />
+
+                  <label className={styles.correctToggle}>
+                    <input
+                      type="checkbox"
+                      checked={answer.is_correct}
+                      onChange={(e) => updateAnswer(index, 'is_correct', e.target.checked)}
+                      disabled={loading}
+                    />
+                    <span>Correcta</span>
+                  </label>
+                </div>
+
+                <div className={styles.answerImageRow}>
+                  <input
+                    type="text"
+                    value={answer.imageUrl || ''}
+                    onChange={(e) => updateAnswer(index, 'imageUrl', e.target.value)}
+                    placeholder="URL de imagen opcional"
+                    disabled={loading}
+                    className={styles.answerImageInput}
+                  />
+                  {answer.imageUrl && (
+                    <div className={styles.answerImagePreview}>
+                      <img src={answer.imageUrl} alt={`Vista previa ${index + 1}`} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className={styles.submitRow}>
           <button
-            type="button"
-            onClick={addAnswer}
-            className={styles.addAnswerButton}
+            type="submit"
+            className={styles.buttonPrimary}
             disabled={loading}
           >
-            + Agregar Respuesta
+            {loading ? 'Creando...' : 'Crear pregunta'}
           </button>
         </div>
-
-        <button 
-          type="submit" 
-          className={styles.buttonPrimary}
-          disabled={loading}
-        >
-          {loading ? 'Creando...' : 'Crear Pregunta'}
-        </button>
       </form>
 
-      <Link to="/" className={styles.backLink}>← Volver al inicio</Link>
+      <Link to="/" className={styles.backLink}>Volver al inicio</Link>
     </div>
   );
 }
