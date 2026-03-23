@@ -10,9 +10,9 @@
   margin: 0 auto;
   height: 100%;
   min-height: 0;
-  /* display: flex;
-  flex-direction: column; */
-  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -63,14 +63,16 @@
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  height: 460px;
-  min-height: 460px;
-  max-height: 460px;
+  height: auto;
+  min-height: 0;
+  max-height: none;
   width: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  align-items: center;
+  justify-content: flex-start;
+  align-items: stretch;
+  flex: 1;
+  overflow: auto;
   min-width: 0;
   box-sizing: border-box;
 }
@@ -136,6 +138,7 @@
   letter-spacing: -0.01em;
   position: relative;
   z-index: 1;
+  overflow-wrap: anywhere;
 }
 
 /* Estilos para imágenes en las preguntas */
@@ -163,6 +166,9 @@
   gap: 10px;
   position: relative;
   z-index: 1;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 .answerOption {
@@ -233,6 +239,14 @@
   letter-spacing: -0.01em;
   color: #ffffff;
   font-weight: 450;
+  overflow-wrap: anywhere;
+}
+
+.quiz form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Estilos para imágenes en las respuestas */
@@ -329,6 +343,99 @@ html, body, #root {
   background: linear-gradient(to top, #3f3f3f 80%, transparent 100%);
   z-index: 10;
   padding-bottom: 12px;
+}
+
+@media (max-height: 540px) {
+  .quiz {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .quizHeader {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+
+  .quizHeader h2 {
+    font-size: 18px;
+  }
+
+  .quizHeader p,
+  .questionCounter,
+  .progressText {
+    font-size: 11px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+  }
+
+  .progressContainer {
+    margin-bottom: 8px;
+    height: 4px;
+  }
+
+  .questionCard {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .questionHeader {
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+
+  .questionNumber,
+  .questionType {
+    font-size: 10px;
+    padding: 5px 10px;
+  }
+
+  .questionText {
+    font-size: 11px;
+    line-height: 1.35;
+    margin-top: 6px;
+    margin-bottom: 10px;
+  }
+
+  .questionText img {
+    max-height: 12vh;
+    margin: 6px auto;
+  }
+
+  .answersList {
+    gap: 8px;
+  }
+
+  .answerOption {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+
+  .answerOption input {
+    width: 16px;
+    height: 16px;
+  }
+
+  .answerOption label {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .answerOption label img {
+    max-height: 10vh;
+    margin: 4px auto;
+  }
+
+  .navigationButtons {
+    gap: 10px;
+    margin-top: 10px;
+    padding-bottom: 6px;
+  }
+
+  .navButton,
+  .submitButton {
+    padding: 10px 16px;
+    font-size: 12px;
+  }
 }
 
 .navButton {
