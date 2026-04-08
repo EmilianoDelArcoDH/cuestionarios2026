@@ -18,6 +18,18 @@ function formatQuizTitle(name) {
   return withoutBracket.slice(dashIndex + 3).trim();
 }
 
+function normalizeText(value) {
+  return (value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+function isSelfAssessmentQuiz(name) {
+  return normalizeText(name).includes('autoevaluacion');
+}
+
 function buildInitialAnswers(quizData) {
   const initialAnswers = {};
   if (!quizData?.questions) return initialAnswers;
@@ -91,13 +103,14 @@ export default function Quiz() {
   const [lightboxImage, setLightboxImage] = useState(null);
 
   const displayTitle = formatQuizTitle(quiz?.topic?.name);
+  const selfAssessment =
+    isSelfAssessmentQuiz(quiz?.topic?.name) || isSelfAssessmentQuiz(displayTitle);
 
   useEffect(() => {
     let isMounted = true;
 
     (async () => {
       const pgState = await waitForMessage(3000);
-      // console.log('[PGEvent] Estado recibido al iniciar actividad:', pgState);
 
       if (pgState && isMounted) {
         try {
@@ -122,7 +135,6 @@ export default function Quiz() {
     if (restored) {
       loadQuiz();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restored, topicId]);
 
   useEffect(() => {
@@ -164,6 +176,8 @@ export default function Quiz() {
             attempt_number: restoredState.current.attempt_number,
             remaining_attempts: restoredState.current.remaining_attempts,
             passed: restoredState.current.passed,
+            is_self_assessment:
+              restoredState.current.is_self_assessment ?? isSelfAssessmentQuiz(data?.topic?.name),
           });
         } else {
           setResult(null);
@@ -237,12 +251,7 @@ export default function Quiz() {
         const selectedCorrect = userIds.filter((id) => correctIds.includes(id)).length;
         const selectedIncorrect = userIds.filter((id) => incorrectIds.includes(id)).length;
 
-        // Puntaje proporcional:
-        // + por correctas elegidas
-        // - por incorrectas elegidas
         let questionScore = (selectedCorrect - selectedIncorrect) / correctIds.length;
-
-        // Nunca menos de 0 ni más de 1
         questionScore = Math.max(0, Math.min(1, questionScore));
 
         totalScore += questionScore;
@@ -280,16 +289,15 @@ export default function Quiz() {
       const score_percent = Number(((totalScore / quiz.questions.length) * 100).toFixed(2));
 
       const passed = score_percent >= 70;
-      const maxAttempts = 3;
-      const remaining_attempts = passed
-        ? Math.max(0, maxAttempts - attempt_number)
-        : Math.max(0, maxAttempts - attempt_number);
+      const maxAttempts = selfAssessment ? 1 : 3;
+      const remaining_attempts = Math.max(0, maxAttempts - attempt_number);
 
       const resultData = {
         score_percent,
         attempt_number,
         remaining_attempts,
         passed,
+        is_self_assessment: selfAssessment,
       };
       const reviewData = buildReviewData(quiz, answers);
 
@@ -302,6 +310,7 @@ export default function Quiz() {
           id: q.id,
           type: q.type,
         })),
+        is_self_assessment: selfAssessment,
       };
 
       setResult(resultData);
@@ -309,7 +318,14 @@ export default function Quiz() {
       setCurrentQuestionIndex(0);
       restoredState.current = stateToPost;
 
-      if (passed) {
+      if (selfAssessment) {
+        postEvent(
+          'SUCCESS',
+          'Has completado la autoevaluación',
+          [],
+          stateToPost
+        );
+      } else if (passed) {
         postEvent(
           'SUCCESS',
           'Has completado el ejercicio',
@@ -348,7 +364,7 @@ export default function Quiz() {
     const currentRemainingAttempts =
       typeof restoredState.current?.remaining_attempts === 'number'
         ? restoredState.current.remaining_attempts
-        : 3;
+        : selfAssessment ? 1 : 3;
 
     const nextState = {
       topicId,
@@ -361,6 +377,7 @@ export default function Quiz() {
         id: q.id,
         type: q.type,
       })),
+      is_self_assessment: selfAssessment,
     };
 
     setResult(null);
@@ -371,10 +388,9 @@ export default function Quiz() {
 
     restoredState.current = nextState;
 
-    // No descontamos intento acá. Solo limpiamos estado para un nuevo envío real.
     postEvent(
       'FAILURE',
-      'Reintento iniciado',
+      selfAssessment ? 'Autoevaluación reiniciada' : 'Reintento iniciado',
       [],
       nextState
     );
@@ -396,12 +412,13 @@ export default function Quiz() {
       quizId: quiz?.id,
       answers: initialAnswers,
       attempt_number: 0,
-      remaining_attempts: 3,
+      remaining_attempts: selfAssessment ? 1 : 3,
       passed: false,
       questions: quiz?.questions?.map((q) => ({
         id: q.id,
         type: q.type,
       })),
+      is_self_assessment: selfAssessment,
     };
 
     postEvent(
@@ -445,20 +462,28 @@ export default function Quiz() {
           <h3>{displayTitle}</h3>
 
           <div
-            className={`${styles.scoreDisplay} ${result.passed ? styles.passed : styles.failed
-              }`}
+            className={`${styles.scoreDisplay} ${(result.is_self_assessment || result.passed)
+              ? styles.passed
+              : styles.failed}`}
           >
             {result.score_percent}%
           </div>
 
-          <div
-            className={`${styles.resultBadge} ${result.passed ? styles.passed : styles.failed
-              }`}
-          >
-            {result.passed ? '✓ APROBADO' : '✗ NO APROBADO'}
-          </div>
+          {!result.is_self_assessment && (
+            <div
+              className={`${styles.resultBadge} ${result.passed ? styles.passed : styles.failed}`}
+            >
+              {result.passed ? '✓ APROBADO' : '✗ NO APROBADO'}
+            </div>
+          )}
 
-          {!result.passed && (
+          {result.is_self_assessment && (
+            <div className={styles.attemptsInfo}>
+              Intento {result.attempt_number} de 1
+            </div>
+          )}
+
+          {!result.is_self_assessment && !result.passed && (
             <div className={styles.attemptsInfo}>
               Intento {result.attempt_number} de 3
               <br />
@@ -468,39 +493,30 @@ export default function Quiz() {
             </div>
           )}
 
-          {result.passed && (
+          {!result.is_self_assessment && result.passed && (
             <div className="success-message">
               ¡Felicitaciones! Has aprobado el cuestionario con {result.score_percent}%
             </div>
           )}
 
-          {!result.passed && result.remaining_attempts > 0 && (
+          {!result.is_self_assessment && !result.passed && result.remaining_attempts > 0 && (
             <div className="error-message">
-              Necesitas al menos 70% para aprobar. ¡Inténtalo nuevamente!
+              En este caso el porcentaje de aprobación del 70% no fue alcanzado, te recomendamos que si tenes dudas vuelvas a revisar el contenido e intentes nuevamente.
             </div>
           )}
 
-          {!result.passed && result.remaining_attempts === 0 && (
+          {!result.is_self_assessment && !result.passed && result.remaining_attempts === 0 && (
             <div className="error-message">
               No has aprobado y ya no tienes más intentos disponibles.
             </div>
           )}
 
           <div className={styles.resultsActions}>
-            {!result.passed && result.remaining_attempts > 0 && (
+            {!result.is_self_assessment && !result.passed && result.remaining_attempts > 0 && (
               <button onClick={handleRetry} className={styles.retryButton}>
-                🔄 Intentar de Nuevo
+                Intentar de Nuevo
               </button>
             )}
-
-            {/* {!result.passed && result.remaining_attempts === 0 && (
-              <button
-                onClick={handleResetActivity}
-                className={styles.retryButton}
-              >
-                🧹 Reiniciar Actividad
-              </button>
-            )} */}
           </div>
 
           {review.length > 0 && (
@@ -545,10 +561,10 @@ export default function Quiz() {
                             dangerouslySetInnerHTML={{ __html: answer.text }}
                           />
                           <span className={styles.reviewAnswerMeta}>
-                            {answer.status === 'correctSelected' && 'La marcaste y era correcta'}
+                            {answer.status === 'correctSelected' && 'Tu respuesta es correcta'}
                             {answer.status === 'correctMissing' && 'Era correcta y no la marcaste'}
-                            {answer.status === 'incorrectSelected' && 'La marcaste y era incorrecta'}
-                            {answer.status === 'neutral' && 'No la marcaste'}
+                            {answer.status === 'incorrectSelected' && 'Tu respuesta no es correcta'}
+                            {answer.status === 'neutral' && 'Respuesta no seleccionada'}
                           </span>
                         </li>
                       ))}
