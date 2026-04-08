@@ -29,6 +29,50 @@ function buildInitialAnswers(quizData) {
   return initialAnswers;
 }
 
+function buildReviewData(quizData, userAnswers) {
+  if (!quizData?.questions?.length) return [];
+
+  return quizData.questions.map((question, index) => {
+    const selectedIds = (userAnswers[question.id] || []).map((id) => String(id));
+
+    const reviewedAnswers = question.answers.map((answer) => {
+      const answerId = String(answer.id);
+      const isSelected = selectedIds.includes(answerId);
+      const isCorrect = answer.isCorrect === true;
+
+      let status = 'neutral';
+
+      if (isCorrect && isSelected) status = 'correctSelected';
+      if (isCorrect && !isSelected) status = 'correctMissing';
+      if (!isCorrect && isSelected) status = 'incorrectSelected';
+
+      return {
+        id: answer.id,
+        text: answer.text,
+        isSelected,
+        isCorrect,
+        status,
+      };
+    });
+
+    const isQuestionCorrect = reviewedAnswers.every((answer) =>
+      answer.isCorrect ? answer.isSelected : !answer.isSelected
+    );
+
+    const visibleAnswers = isQuestionCorrect
+      ? reviewedAnswers
+      : reviewedAnswers.filter((answer) => answer.isSelected);
+
+    return {
+      id: question.id,
+      index: index + 1,
+      text: question.text,
+      isQuestionCorrect,
+      answers: visibleAnswers,
+    };
+  });
+}
+
 export default function Quiz() {
   const { postEvent, waitForMessage } = usePgEvent();
   const { topicId } = useParams();
@@ -42,6 +86,7 @@ export default function Quiz() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+  const [review, setReview] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [lightboxImage, setLightboxImage] = useState(null);
 
@@ -51,7 +96,7 @@ export default function Quiz() {
     let isMounted = true;
 
     (async () => {
-      const pgState = await waitForMessage(1000);
+      const pgState = await waitForMessage(3000);
       // console.log('[PGEvent] Estado recibido al iniciar actividad:', pgState);
 
       if (pgState && isMounted) {
@@ -113,6 +158,7 @@ export default function Quiz() {
         setAnswers(restoredState.current.answers || initialAnswers);
 
         if (typeof restoredState.current.passed === 'boolean') {
+          setReview(buildReviewData(data, restoredState.current.answers || initialAnswers));
           setResult({
             score_percent: restoredState.current.score_percent,
             attempt_number: restoredState.current.attempt_number,
@@ -121,10 +167,12 @@ export default function Quiz() {
           });
         } else {
           setResult(null);
+          setReview([]);
         }
       } else {
         setAnswers(initialAnswers);
         setResult(null);
+        setReview([]);
       }
     } catch (err) {
       setError(err.message || 'Error al cargar el cuestionario');
@@ -243,6 +291,7 @@ export default function Quiz() {
         remaining_attempts,
         passed,
       };
+      const reviewData = buildReviewData(quiz, answers);
 
       const stateToPost = {
         ...resultData,
@@ -256,6 +305,7 @@ export default function Quiz() {
       };
 
       setResult(resultData);
+      setReview(reviewData);
       setCurrentQuestionIndex(0);
       restoredState.current = stateToPost;
 
@@ -314,6 +364,7 @@ export default function Quiz() {
     };
 
     setResult(null);
+    setReview([]);
     setAnswers(initialAnswers);
     setCurrentQuestionIndex(0);
     setError('');
@@ -335,6 +386,7 @@ export default function Quiz() {
     const initialAnswers = buildInitialAnswers(quiz);
 
     setResult(null);
+    setReview([]);
     setAnswers(initialAnswers);
     setCurrentQuestionIndex(0);
     setError('');
@@ -450,6 +502,62 @@ export default function Quiz() {
               </button>
             )} */}
           </div>
+
+          {review.length > 0 && (
+            <div className={styles.reviewSection}>
+              <h4>Revision de respuestas</h4>
+
+              <div className={styles.reviewList}>
+                {review.map((question) => (
+                  <section key={question.id} className={styles.reviewCard}>
+                    <div className={styles.reviewHeader}>
+                      <span className={styles.reviewQuestionNumber}>
+                        Pregunta {question.index}
+                      </span>
+                      <span
+                        className={`${styles.reviewQuestionStatus} ${
+                          question.isQuestionCorrect ? styles.reviewOk : styles.reviewBad
+                        }`}
+                      >
+                        {question.isQuestionCorrect ? 'Correcta' : 'Incorrecta'}
+                      </span>
+                    </div>
+
+                    <div
+                      className={styles.reviewQuestionText}
+                      dangerouslySetInnerHTML={{ __html: question.text }}
+                    />
+
+                    <ul className={styles.reviewAnswers}>
+                      {question.answers.map((answer) => (
+                        <li
+                          key={answer.id}
+                          className={`${styles.reviewAnswer} ${
+                            answer.status === 'correctSelected' ? styles.reviewAnswerCorrect : ''
+                          } ${
+                            answer.status === 'correctMissing' ? styles.reviewAnswerMissing : ''
+                          } ${
+                            answer.status === 'incorrectSelected' ? styles.reviewAnswerWrong : ''
+                          }`}
+                        >
+                          <div
+                            className={styles.reviewAnswerText}
+                            dangerouslySetInnerHTML={{ __html: answer.text }}
+                          />
+                          <span className={styles.reviewAnswerMeta}>
+                            {answer.status === 'correctSelected' && 'La marcaste y era correcta'}
+                            {answer.status === 'correctMissing' && 'Era correcta y no la marcaste'}
+                            {answer.status === 'incorrectSelected' && 'La marcaste y era incorrecta'}
+                            {answer.status === 'neutral' && 'No la marcaste'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

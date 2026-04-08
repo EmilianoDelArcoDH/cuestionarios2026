@@ -592,6 +592,128 @@ html, body, #root {
   margin-top: 24px;
 }
 
+.reviewSection {
+  margin-top: 28px;
+  text-align: left;
+}
+
+.reviewSection h4 {
+  margin: 0 0 16px;
+  font-size: 20px;
+  color: #ffffff;
+}
+
+.reviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.reviewCard {
+  background: linear-gradient(135deg, #616161 0%, #565656 100%);
+  border: 1px solid #7a7a7a;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+
+.reviewHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.reviewQuestionNumber {
+  font-size: 13px;
+  font-weight: 700;
+  color: #d7f5e5;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.reviewQuestionStatus {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.reviewOk {
+  background: #c8e6c9;
+  color: #1b5e20;
+}
+
+.reviewBad {
+  background: #ffcdd2;
+  color: #b71c1c;
+}
+
+.reviewQuestionText {
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+  overflow-wrap: anywhere;
+}
+
+.reviewQuestionText img,
+.reviewAnswerText img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 10px 0;
+  display: block;
+}
+
+.reviewAnswers {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reviewAnswer {
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid #8a8a8a;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.reviewAnswerCorrect {
+  border-color: #66bb6a;
+  background: rgba(102, 187, 106, 0.16);
+}
+
+.reviewAnswerMissing {
+  border-color: #ffd54f;
+  background: rgba(255, 213, 79, 0.14);
+}
+
+.reviewAnswerWrong {
+  border-color: #ef5350;
+  background: rgba(239, 83, 80, 0.16);
+}
+
+.reviewAnswerText {
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-bottom: 6px;
+  overflow-wrap: anywhere;
+}
+
+.reviewAnswerMeta {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f3f3f3;
+}
+
 .resultsActions button,
 .resultsActions a {
   padding: 12px 24px;
